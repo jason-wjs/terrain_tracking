@@ -1,0 +1,20 @@
+# Python caches and local tooling
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Local environments
+.venv/
+
+# Experiment outputs
+logs/
+wandb/
+*.log
+tea_debug.log
+
+# Legacy / local-only conversion code explicitly excluded from tracking
+src/terrain_tracking/data_conversion/
+
+# OS/editor noise
+.DS_Store
