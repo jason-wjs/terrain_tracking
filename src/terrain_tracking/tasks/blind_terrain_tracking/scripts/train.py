@@ -19,6 +19,7 @@ from terrain_tracking.tasks.blind_terrain_tracking.scripts.common import (
 class FrontendConfig:
   pair_manifest: str
   task: str = DEFAULT_TASK_ID
+  collision_backend: str = "primitive_boxes"
 
 
 def main() -> None:
@@ -31,7 +32,11 @@ def main() -> None:
   )
 
   train_cfg = MjlabTrainConfig.from_task(frontend.task)
-  apply_pair_manifest_to_env_cfg(train_cfg.env, frontend.pair_manifest)
+  apply_pair_manifest_to_env_cfg(
+    train_cfg.env,
+    frontend.pair_manifest,
+    collision_backend=frontend.collision_backend,
+  )
 
   args = tyro.cli(
     MjlabTrainConfig,

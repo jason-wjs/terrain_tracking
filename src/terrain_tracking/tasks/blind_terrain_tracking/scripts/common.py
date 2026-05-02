@@ -31,15 +31,23 @@ def build_paired_env(
   play: bool,
   device: str,
   num_envs: int | None = None,
+  env_spacing: float | None = None,
   render_mode: str | None = None,
   no_terminations: bool = False,
+  collision_backend: str = "primitive_boxes",
 ) -> tuple[ManagerBasedRlEnv, RslRlBaseRunnerCfg]:
   env_cfg = load_env_cfg(task_id, play=play)
   agent_cfg = load_rl_cfg(task_id)
-  apply_pair_manifest_to_env_cfg(env_cfg, pair_manifest)
+  apply_pair_manifest_to_env_cfg(
+    env_cfg,
+    pair_manifest,
+    collision_backend=collision_backend,
+  )
 
   if num_envs is not None:
     env_cfg.scene.num_envs = num_envs
+  if env_spacing is not None:
+    env_cfg.scene.env_spacing = env_spacing
   if no_terminations:
     env_cfg.terminations = {}
 

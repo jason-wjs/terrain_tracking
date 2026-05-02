@@ -24,9 +24,11 @@ class PlayConfig:
   agent: Literal["zero", "random", "trained"] = "zero"
   checkpoint_file: str | None = None
   num_envs: int | None = None
+  env_spacing: float | None = None
   device: str | None = None
   viewer: Literal["auto", "native", "viser"] = "auto"
   no_terminations: bool = False
+  collision_backend: str = "primitive_boxes"
 
 
 def main() -> None:
@@ -39,7 +41,9 @@ def main() -> None:
     play=True,
     device=device,
     num_envs=args.num_envs,
+    env_spacing=args.env_spacing,
     no_terminations=args.no_terminations,
+    collision_backend=args.collision_backend,
   )
   vec_env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
   policy = build_policy(

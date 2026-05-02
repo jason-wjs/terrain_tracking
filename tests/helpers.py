@@ -102,3 +102,29 @@ def create_pair_manifest(
     payload["terrain_scale"] = list(terrain_scale)
   path.write_text(json.dumps(payload), encoding="utf-8")
   return path
+
+
+def create_heightfield_collision_manifest(path: Path) -> Path:
+  np.save(
+    path.parent / "terrain_hf.npy",
+    np.array([[0.0, 0.1], [0.2, 0.3]], dtype=np.float32),
+  )
+  path.write_text(
+    json.dumps(
+      {
+        "schema_version": 1,
+        "terrain_name": "test_hfield",
+        "collision": {
+          "type": "heightfield",
+          "hf_file": "terrain_hf.npy",
+          "min_point": [-0.2, -0.2],
+          "dx": 0.4,
+          "base_z": -0.4,
+          "xy_scale": 1.0,
+          "height_scale": 1.0,
+        },
+      }
+    ),
+    encoding="utf-8",
+  )
+  return path
