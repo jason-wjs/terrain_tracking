@@ -30,6 +30,8 @@ class ConvertPairConfig:
   terrain_file: str | Path
   output_dir: str | Path
   sample_name: str | None = None
+  terrain_collision_file: str | Path | None = None
+  terrain_visual_file: str | Path | None = None
   terrain_translation: tuple[float, float, float] = (0.0, 0.0, 0.0)
   terrain_quat_xyzw: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 1.0)
   terrain_scale: tuple[float, float, float] = (1.0, 1.0, 1.0)
@@ -41,6 +43,8 @@ def write_pair_manifest_bundle(
   terrain_file: str | Path,
   output_dir: str | Path,
   sample_name: str | None = None,
+  terrain_collision_file: str | Path | None = None,
+  terrain_visual_file: str | Path | None = None,
   terrain_translation: tuple[float, float, float] = (0.0, 0.0, 0.0),
   terrain_quat_xyzw: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 1.0),
   terrain_scale: tuple[float, float, float] = (1.0, 1.0, 1.0),
@@ -52,16 +56,32 @@ def write_pair_manifest_bundle(
 
   motion_ref = _validate_manifest_reference(motion_file, manifest_dir=bundle_dir)
   terrain_ref = _validate_manifest_reference(terrain_file, manifest_dir=bundle_dir)
+  terrain_collision_ref = (
+    _validate_manifest_reference(terrain_collision_file, manifest_dir=bundle_dir)
+    if terrain_collision_file is not None
+    else None
+  )
+  terrain_visual_ref = (
+    _validate_manifest_reference(terrain_visual_file, manifest_dir=bundle_dir)
+    if terrain_visual_file is not None
+    else None
+  )
+
+  pair_payload: dict[str, Any] = {
+    "motion_file": motion_ref,
+    "terrain_file": terrain_ref,
+    "terrain_translation": [float(v) for v in terrain_translation],
+    "terrain_quat_xyzw": [float(v) for v in terrain_quat_xyzw],
+    "terrain_scale": [float(v) for v in terrain_scale],
+  }
+  if terrain_collision_ref is not None:
+    pair_payload["terrain_collision_file"] = terrain_collision_ref
+  if terrain_visual_ref is not None:
+    pair_payload["terrain_visual_file"] = terrain_visual_ref
 
   _write_json(
     bundle_dir / "pair.json",
-    {
-      "motion_file": motion_ref,
-      "terrain_file": terrain_ref,
-      "terrain_translation": [float(v) for v in terrain_translation],
-      "terrain_quat_xyzw": [float(v) for v in terrain_quat_xyzw],
-      "terrain_scale": [float(v) for v in terrain_scale],
-    },
+    pair_payload,
   )
   _write_json(
     bundle_dir / "meta.json",
@@ -79,12 +99,24 @@ def convert_pair(config: ConvertPairConfig) -> Path:
     terrain_file=config.terrain_file,
     output_dir=config.output_dir,
     sample_name=config.sample_name,
+    terrain_collision_file=config.terrain_collision_file,
+    terrain_visual_file=config.terrain_visual_file,
     terrain_translation=config.terrain_translation,
     terrain_quat_xyzw=config.terrain_quat_xyzw,
     terrain_scale=config.terrain_scale,
     source_trace={
       "motion_file": str(config.motion_file),
       "terrain_obj": str(config.terrain_file),
+      "terrain_collision_file": (
+        str(config.terrain_collision_file)
+        if config.terrain_collision_file is not None
+        else None
+      ),
+      "terrain_visual_file": (
+        str(config.terrain_visual_file)
+        if config.terrain_visual_file is not None
+        else None
+      ),
     },
   )
 
@@ -95,6 +127,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
   )
   parser.add_argument("--motion-file", required=True)
   parser.add_argument("--terrain-file", required=True)
+  parser.add_argument("--terrain-collision-file", default=None)
+  parser.add_argument("--terrain-visual-file", default=None)
   parser.add_argument("--output-dir", required=True)
   parser.add_argument("--sample-name", default=None)
   parser.add_argument("--terrain-translation", type=float, nargs=3, default=(0.0, 0.0, 0.0))
@@ -109,6 +143,8 @@ def main() -> None:
     ConvertPairConfig(
       motion_file=args.motion_file,
       terrain_file=args.terrain_file,
+      terrain_collision_file=args.terrain_collision_file,
+      terrain_visual_file=args.terrain_visual_file,
       output_dir=args.output_dir,
       sample_name=args.sample_name,
       terrain_translation=tuple(args.terrain_translation),

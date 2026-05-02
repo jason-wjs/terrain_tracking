@@ -20,6 +20,20 @@ def _required_path(
   return path
 
 
+def _optional_path(
+  payload: dict[str, Any], *, key: str, manifest_path: Path
+) -> Path | None:
+  value = payload.get(key)
+  if value is None:
+    return None
+  if not isinstance(value, str) or not value:
+    raise ValueError(f"Pair manifest key '{key}' must be a non-empty string")
+  path = (manifest_path.parent / value).resolve()
+  if not path.exists():
+    raise FileNotFoundError(path)
+  return path
+
+
 def _float_tuple(
   payload: dict[str, Any],
   *,
@@ -37,6 +51,8 @@ def _float_tuple(
 class PairManifest:
   motion_file: Path
   terrain_file: Path
+  terrain_collision_file: Path | None = None
+  terrain_visual_file: Path | None = None
   terrain_translation: tuple[float, float, float] = (0.0, 0.0, 0.0)
   terrain_quat_xyzw: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 1.0)
   terrain_scale: tuple[float, float, float] = (1.0, 1.0, 1.0)
@@ -56,6 +72,16 @@ class PairManifest:
       terrain_file=_required_path(
         payload,
         key="terrain_file",
+        manifest_path=manifest_path,
+      ),
+      terrain_collision_file=_optional_path(
+        payload,
+        key="terrain_collision_file",
+        manifest_path=manifest_path,
+      ),
+      terrain_visual_file=_optional_path(
+        payload,
+        key="terrain_visual_file",
         manifest_path=manifest_path,
       ),
       terrain_translation=_float_tuple(

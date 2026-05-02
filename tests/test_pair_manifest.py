@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -50,6 +51,29 @@ def test_pair_manifest_load_reads_optional_transform_fields(tmp_path: Path) -> N
     (0.0, 0.0, 0.70710678, 0.70710678)
   )
   assert manifest.terrain_scale == (2.0, 1.5, 1.0)
+
+
+def test_pair_manifest_load_reads_collision_manifest_path(tmp_path: Path) -> None:
+  motion_path = create_motion_clip(tmp_path / "motion.npz")
+  terrain_path = create_quad_obj(tmp_path / "terrain.obj")
+  collision_path = tmp_path / "terrain_collision.json"
+  visual_path = tmp_path / "multi_boxes.obj"
+  collision_path.write_text("{}", encoding="utf-8")
+  create_quad_obj(visual_path)
+  manifest_path = create_pair_manifest(
+    tmp_path / "pair.json",
+    motion_file=motion_path.name,
+    terrain_file=terrain_path.name,
+  )
+  payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+  payload["terrain_collision_file"] = collision_path.name
+  payload["terrain_visual_file"] = visual_path.name
+  manifest_path.write_text(json.dumps(payload), encoding="utf-8")
+
+  manifest = PairManifest.load(manifest_path)
+
+  assert manifest.terrain_collision_file == collision_path.resolve()
+  assert manifest.terrain_visual_file == visual_path.resolve()
 
 
 def test_pair_manifest_load_rejects_missing_required_keys(tmp_path: Path) -> None:
