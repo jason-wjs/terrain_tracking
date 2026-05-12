@@ -29,3 +29,26 @@ uv run python -m terrain_tracking.convert_pair \
 ```
 
 When `terrain_collision_file` is present, `multi_boxes.obj` is not used as the collision source. See `docs/terrain-collision-contract.md`.
+
+## Oracle Perception Tasks
+
+This package also registers oracle perception tracking tasks for the current height-map stage:
+
+- `TT-Tracking-TerrainOracleHeight-Unitree-G1`: blind tracking observations plus a clean `0.7 m x 0.7 m` yaw-aligned terrain height scan from `torso_link`.
+- `TT-Tracking-TerrainOracleTeacher-Unitree-G1`: oracle height observations plus PHP teacher-style global tracking error terms for `torso_link`.
+
+Both tasks reuse the blind tracking rewards, terminations, terrain pair application, and PPO defaults. They are simulation-only oracle tasks and are not deployment policies.
+
+Train with the existing paired training entry point:
+
+```bash
+uv run python -m terrain_tracking.tasks.blind_terrain_tracking.scripts.train \
+  --pair-manifest /abs/path/to/pair.json \
+  --task TT-Tracking-TerrainOracleHeight-Unitree-G1
+```
+
+```bash
+uv run python -m terrain_tracking.tasks.blind_terrain_tracking.scripts.train \
+  --pair-manifest /abs/path/to/pair.json \
+  --task TT-Tracking-TerrainOracleTeacher-Unitree-G1
+```
