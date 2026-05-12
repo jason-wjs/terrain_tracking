@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import Any
+
 from mjlab.envs import ManagerBasedRlEnvCfg
 from mjlab.envs import mdp as envs_mdp
 from mjlab.managers.observation_manager import ObservationTermCfg
@@ -8,6 +11,7 @@ from mjlab.sensor import GridPatternCfg, ObjRef, RayCastSensorCfg
 from terrain_tracking.tasks.blind_terrain_tracking.config.g1.env_cfgs import (
   unitree_g1_blind_terrain_tracking_env_cfg,
 )
+from terrain_tracking.tasks.oracle_terrain_tracking.config.g1 import observations
 
 TERRAIN_SCAN_SENSOR_NAME = "terrain_scan"
 HEIGHT_SCAN_MAX_DISTANCE = 5.0
@@ -19,6 +23,10 @@ def _height_scan_term() -> ObservationTermCfg:
     params={"sensor_name": TERRAIN_SCAN_SENSOR_NAME},
     scale=1.0 / HEIGHT_SCAN_MAX_DISTANCE,
   )
+
+
+def _teacher_term(func: Callable[..., Any]) -> ObservationTermCfg:
+  return ObservationTermCfg(func=func, params={"command_name": "motion"})
 
 
 def _add_oracle_height_scan(cfg: ManagerBasedRlEnvCfg) -> None:
@@ -37,6 +45,18 @@ def _add_oracle_height_scan(cfg: ManagerBasedRlEnvCfg) -> None:
     cfg.observations[group_name].terms["height_scan"] = _height_scan_term()
 
 
+def _add_oracle_teacher_terms(cfg: ManagerBasedRlEnvCfg) -> None:
+  teacher_terms = {
+    "global_anchor_pos_error_w": observations.global_anchor_pos_error_w,
+    "global_anchor_lin_vel_error_w": observations.global_anchor_lin_vel_error_w,
+    "reference_anchor_lin_vel_w": observations.reference_anchor_lin_vel_w,
+  }
+  for group_name in ("actor", "critic"):
+    terms = cfg.observations[group_name].terms
+    for term_name, func in teacher_terms.items():
+      terms[term_name] = _teacher_term(func)
+
+
 def unitree_g1_oracle_height_terrain_tracking_env_cfg(
   play: bool = False,
 ) -> ManagerBasedRlEnvCfg:
@@ -48,4 +68,6 @@ def unitree_g1_oracle_height_terrain_tracking_env_cfg(
 def unitree_g1_oracle_teacher_terrain_tracking_env_cfg(
   play: bool = False,
 ) -> ManagerBasedRlEnvCfg:
-  return unitree_g1_oracle_height_terrain_tracking_env_cfg(play=play)
+  cfg = unitree_g1_oracle_height_terrain_tracking_env_cfg(play=play)
+  _add_oracle_teacher_terms(cfg)
+  return cfg

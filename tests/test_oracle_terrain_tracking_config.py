@@ -7,6 +7,9 @@ from mjlab.sensor import GridPatternCfg, ObjRef, RayCastSensorCfg
 from terrain_tracking.tasks.blind_terrain_tracking.config.g1.env_cfgs import (
   unitree_g1_blind_terrain_tracking_env_cfg,
 )
+from terrain_tracking.tasks.oracle_terrain_tracking.config.g1 import (
+  observations as oracle_obs,
+)
 from terrain_tracking.tasks.oracle_terrain_tracking.config.g1.env_cfgs import (
   unitree_g1_oracle_height_terrain_tracking_env_cfg,
   unitree_g1_oracle_teacher_terrain_tracking_env_cfg,
@@ -76,10 +79,86 @@ def test_oracle_height_grid_pattern_has_expected_current_ray_count() -> None:
   assert torch.allclose(directions, torch.tensor([[0.0, 0.0, -1.0]]).repeat(64, 1))
 
 
-def test_oracle_teacher_includes_height_scan_before_teacher_terms_exist() -> None:
+def test_oracle_teacher_includes_height_scan() -> None:
   cfg = unitree_g1_oracle_teacher_terrain_tracking_env_cfg()
 
   for group_name in ("actor", "critic"):
     term_names = _term_names(cfg, group_name)
     assert "height_scan" in term_names
-    assert ORACLE_TEACHER_TERMS.isdisjoint(term_names)
+
+
+class _FakeMotionCommand:
+  def __init__(self) -> None:
+    self.anchor_pos_w = torch.tensor(
+      [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+      dtype=torch.float32,
+    )
+    self.robot_anchor_pos_w = torch.tensor(
+      [[0.5, 1.5, 2.5], [3.5, 4.5, 5.5]],
+      dtype=torch.float32,
+    )
+    self.anchor_lin_vel_w = torch.tensor(
+      [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]],
+      dtype=torch.float32,
+    )
+    self.robot_anchor_lin_vel_w = torch.tensor(
+      [[0.0, 0.1, 0.1], [0.1, 0.2, 0.3]],
+      dtype=torch.float32,
+    )
+
+
+class _FakeCommandManager:
+  def __init__(self, command: _FakeMotionCommand) -> None:
+    self.command = command
+
+  def get_term(self, command_name: str) -> _FakeMotionCommand:
+    assert command_name == "motion"
+    return self.command
+
+
+class _FakeEnv:
+  def __init__(self, command: _FakeMotionCommand) -> None:
+    self.command_manager = _FakeCommandManager(command)
+
+
+def test_teacher_privileged_observation_functions_return_expected_values() -> None:
+  command = _FakeMotionCommand()
+  env = _FakeEnv(command)
+
+  assert torch.allclose(
+    oracle_obs.global_anchor_pos_error_w(env, "motion"),
+    torch.full((2, 3), 0.5),
+  )
+  assert torch.allclose(
+    oracle_obs.global_anchor_lin_vel_error_w(env, "motion"),
+    torch.tensor([[0.1, 0.1, 0.2], [0.3, 0.3, 0.3]], dtype=torch.float32),
+  )
+  assert torch.allclose(
+    oracle_obs.reference_anchor_lin_vel_w(env, "motion"),
+    command.anchor_lin_vel_w,
+  )
+
+
+def test_oracle_height_does_not_include_teacher_privileged_terms() -> None:
+  cfg = unitree_g1_oracle_height_terrain_tracking_env_cfg()
+
+  for group_name in ("actor", "critic"):
+    assert ORACLE_TEACHER_TERMS.isdisjoint(_term_names(cfg, group_name))
+
+
+def test_oracle_teacher_adds_privileged_terms_to_actor_and_critic() -> None:
+  cfg = unitree_g1_oracle_teacher_terrain_tracking_env_cfg()
+
+  expected_funcs = {
+    "global_anchor_pos_error_w": oracle_obs.global_anchor_pos_error_w,
+    "global_anchor_lin_vel_error_w": oracle_obs.global_anchor_lin_vel_error_w,
+    "reference_anchor_lin_vel_w": oracle_obs.reference_anchor_lin_vel_w,
+  }
+  for group_name in ("actor", "critic"):
+    terms = cfg.observations[group_name].terms
+    assert "height_scan" in terms
+    for term_name, func in expected_funcs.items():
+      term = terms[term_name]
+      assert term.func is func
+      assert term.params == {"command_name": "motion"}
+      assert term.noise is None
