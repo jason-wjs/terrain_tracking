@@ -360,3 +360,71 @@ def test_hfield_manifest_defaults_to_one_shared_primitive_box_tile(
     )
   finally:
     env.close()
+
+
+@pytest.mark.parametrize(
+  ("task_id", "min_extra_actor_dims"),
+  [
+    ("TT-Tracking-TerrainOracleHeight-Unitree-G1", 64),
+    ("TT-Tracking-TerrainOracleTeacher-Unitree-G1", 73),
+  ],
+)
+def test_oracle_terrain_tracking_env_can_reset_and_step_on_cpu(
+  tmp_path: Path,
+  task_id: str,
+  min_extra_actor_dims: int,
+) -> None:
+  collision_path = create_heightfield_collision_manifest(
+    tmp_path / "terrain_collision.json"
+  )
+  bundle_dir = convert_pair(
+    ConvertPairConfig(
+      motion_file=create_motion_clip(tmp_path / "motion.npz"),
+      terrain_file=create_ramp_obj(tmp_path / "terrain.obj"),
+      terrain_collision_file=collision_path,
+      output_dir=tmp_path / "converted",
+      sample_name="smoke_pair",
+    )
+  )
+
+  blind_env, _blind_agent_cfg = build_paired_env(
+    "TT-Tracking-TerrainBlind-Unitree-G1",
+    str(bundle_dir / "pair.json"),
+    play=True,
+    device="cpu",
+    num_envs=1,
+    no_terminations=True,
+  )
+  oracle_env, _oracle_agent_cfg = build_paired_env(
+    task_id,
+    str(bundle_dir / "pair.json"),
+    play=True,
+    device="cpu",
+    num_envs=1,
+    no_terminations=True,
+  )
+  try:
+    blind_obs, _blind_extras = blind_env.reset()
+    oracle_obs, _oracle_extras = oracle_env.reset()
+
+    blind_actor_dim = blind_obs["actor"].shape[-1]
+    oracle_actor_dim = oracle_obs["actor"].shape[-1]
+    assert oracle_actor_dim >= blind_actor_dim + min_extra_actor_dims
+
+    action_dim = oracle_env.unwrapped.single_action_space.shape[0]
+    action = torch.zeros(
+      (1, action_dim),
+      dtype=torch.float32,
+      device=oracle_env.device,
+    )
+    oracle_obs, reward, terminated, timeouts, extras = oracle_env.step(action)
+
+    assert set(oracle_obs.keys()) == {"actor", "critic"}
+    assert oracle_obs["actor"].shape[0] == 1
+    assert reward.shape == (1,)
+    assert terminated.shape == (1,)
+    assert timeouts.shape == (1,)
+    assert isinstance(extras, dict)
+  finally:
+    oracle_env.close()
+    blind_env.close()
