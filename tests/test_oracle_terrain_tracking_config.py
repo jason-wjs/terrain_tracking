@@ -80,4 +80,6 @@ def test_oracle_teacher_includes_height_scan_before_teacher_terms_exist() -> Non
   cfg = unitree_g1_oracle_teacher_terrain_tracking_env_cfg()
 
   for group_name in ("actor", "critic"):
-    assert "height_scan" in _term_names(cfg, group_name)
+    term_names = _term_names(cfg, group_name)
+    assert "height_scan" in term_names
+    assert ORACLE_TEACHER_TERMS.isdisjoint(term_names)

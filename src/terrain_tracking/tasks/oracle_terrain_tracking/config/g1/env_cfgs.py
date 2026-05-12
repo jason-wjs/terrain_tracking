@@ -30,7 +30,6 @@ def _add_oracle_height_scan(cfg: ManagerBasedRlEnvCfg) -> None:
     max_distance=HEIGHT_SCAN_MAX_DISTANCE,
     exclude_parent_body=True,
     include_geom_groups=(0,),
-    debug_vis=True,
   )
   cfg.scene.sensors = (cfg.scene.sensors or ()) + (terrain_scan,)
 
