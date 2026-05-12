@@ -395,36 +395,38 @@ def test_oracle_terrain_tracking_env_can_reset_and_step_on_cpu(
     num_envs=1,
     no_terminations=True,
   )
-  oracle_env, _oracle_agent_cfg = build_paired_env(
-    task_id,
-    str(bundle_dir / "pair.json"),
-    play=True,
-    device="cpu",
-    num_envs=1,
-    no_terminations=True,
-  )
   try:
-    blind_obs, _blind_extras = blind_env.reset()
-    oracle_obs, _oracle_extras = oracle_env.reset()
-
-    blind_actor_dim = blind_obs["actor"].shape[-1]
-    oracle_actor_dim = oracle_obs["actor"].shape[-1]
-    assert oracle_actor_dim >= blind_actor_dim + min_extra_actor_dims
-
-    action_dim = oracle_env.unwrapped.single_action_space.shape[0]
-    action = torch.zeros(
-      (1, action_dim),
-      dtype=torch.float32,
-      device=oracle_env.device,
+    oracle_env, _oracle_agent_cfg = build_paired_env(
+      task_id,
+      str(bundle_dir / "pair.json"),
+      play=True,
+      device="cpu",
+      num_envs=1,
+      no_terminations=True,
     )
-    oracle_obs, reward, terminated, timeouts, extras = oracle_env.step(action)
+    try:
+      blind_obs, _blind_extras = blind_env.reset()
+      oracle_obs, _oracle_extras = oracle_env.reset()
 
-    assert set(oracle_obs.keys()) == {"actor", "critic"}
-    assert oracle_obs["actor"].shape[0] == 1
-    assert reward.shape == (1,)
-    assert terminated.shape == (1,)
-    assert timeouts.shape == (1,)
-    assert isinstance(extras, dict)
+      blind_actor_dim = blind_obs["actor"].shape[-1]
+      oracle_actor_dim = oracle_obs["actor"].shape[-1]
+      assert oracle_actor_dim >= blind_actor_dim + min_extra_actor_dims
+
+      action_dim = oracle_env.unwrapped.single_action_space.shape[0]
+      action = torch.zeros(
+        (1, action_dim),
+        dtype=torch.float32,
+        device=oracle_env.device,
+      )
+      oracle_obs, reward, terminated, timeouts, extras = oracle_env.step(action)
+
+      assert set(oracle_obs.keys()) == {"actor", "critic"}
+      assert oracle_obs["actor"].shape[0] == 1
+      assert reward.shape == (1,)
+      assert terminated.shape == (1,)
+      assert timeouts.shape == (1,)
+      assert isinstance(extras, dict)
+    finally:
+      oracle_env.close()
   finally:
-    oracle_env.close()
     blind_env.close()
