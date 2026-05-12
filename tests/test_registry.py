@@ -3,10 +3,22 @@ from __future__ import annotations
 import importlib
 import subprocess
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 
 import mjlab.tasks.registry as registry
+import pytest
 import tomllib
+
+
+@pytest.fixture(autouse=True)
+def preserve_registry() -> Iterator[None]:
+  original_registry = dict(registry._REGISTRY)
+  try:
+    yield
+  finally:
+    registry._REGISTRY.clear()
+    registry._REGISTRY.update(original_registry)
 
 
 def test_pyproject_declares_mjlab_task_entrypoint() -> None:
