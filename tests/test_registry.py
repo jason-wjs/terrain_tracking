@@ -40,3 +40,15 @@ def test_blind_terrain_tracking_tasks_register_with_mjlab_registry() -> None:
   tasks = registry.list_tasks()
   assert "TT-Tracking-TerrainBlind-Unitree-G1" in tasks
   assert "TT-Tracking-TerrainBlind-Unitree-G1-No-State-Estimation" in tasks
+
+
+def test_oracle_terrain_tracking_tasks_register_with_mjlab_registry() -> None:
+  registry._REGISTRY.clear()
+  from terrain_tracking.tasks.oracle_terrain_tracking.config import g1 as g1_config
+
+  importlib.reload(g1_config)
+
+  tasks = registry.list_tasks()
+  assert "TT-Tracking-TerrainOracleHeight-Unitree-G1" in tasks
+  assert "TT-Tracking-TerrainOracleTeacher-Unitree-G1" in tasks
+  assert not any("TerrainOracle" in task and "No-State-Estimation" in task for task in tasks)
