@@ -366,7 +366,7 @@ def test_hfield_manifest_defaults_to_one_shared_primitive_box_tile(
   ("task_id", "min_extra_actor_dims"),
   [
     ("TT-Tracking-TerrainOracleHeight-Unitree-G1", 64),
-    ("TT-Tracking-TerrainOracleTeacher-Unitree-G1", 73),
+    ("TT-Tracking-TerrainOracleTeacher-Unitree-G1", 64),
   ],
 )
 def test_oracle_terrain_tracking_env_can_reset_and_step_on_cpu(

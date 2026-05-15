@@ -47,12 +47,26 @@ def _add_oracle_height_scan(cfg: ManagerBasedRlEnvCfg) -> None:
 
 def _add_oracle_teacher_terms(cfg: ManagerBasedRlEnvCfg) -> None:
   teacher_terms = {
-    "global_anchor_pos_error_w": observations.global_anchor_pos_error_w,
-    "global_anchor_lin_vel_error_w": observations.global_anchor_lin_vel_error_w,
-    "reference_anchor_lin_vel_w": observations.reference_anchor_lin_vel_w,
+    "reference_pelvis_pos_error_b": observations.reference_pelvis_pos_error_b,
+    "reference_pelvis_ori_error_b": observations.reference_pelvis_ori_error_b,
+    "pelvis_lin_vel": observations.pelvis_lin_vel,
+    "pelvis_ang_vel": observations.pelvis_ang_vel,
+    "pelvis_global_pos_w": observations.pelvis_global_pos_w,
+    "pelvis_global_lin_vel_w": observations.pelvis_global_lin_vel_w,
+  }
+  replaced_terms = {
+    "motion_anchor_pos_b",
+    "motion_anchor_ori_b",
+    "base_lin_vel",
+    "base_ang_vel",
+    "global_anchor_pos_error_w",
+    "global_anchor_lin_vel_error_w",
+    "reference_anchor_lin_vel_w",
   }
   for group_name in ("actor", "critic"):
     terms = cfg.observations[group_name].terms
+    for term_name in replaced_terms:
+      terms.pop(term_name, None)
     for term_name, func in teacher_terms.items():
       terms[term_name] = _teacher_term(func)
 
