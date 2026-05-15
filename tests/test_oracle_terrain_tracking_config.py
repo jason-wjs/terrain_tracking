@@ -218,6 +218,19 @@ def test_oracle_height_does_not_include_teacher_privileged_terms() -> None:
     assert ORACLE_TEACHER_TERMS.isdisjoint(_term_names(cfg, group_name))
 
 
+def test_oracle_teacher_uses_php_reward_weights_without_changing_oracle_height() -> None:
+  teacher_cfg = unitree_g1_oracle_teacher_terrain_tracking_env_cfg()
+  height_cfg = unitree_g1_oracle_height_terrain_tracking_env_cfg()
+
+  assert teacher_cfg.rewards["motion_global_root_pos"].weight == 1.0
+  assert teacher_cfg.rewards["motion_global_root_ori"].weight == 1.0
+  assert teacher_cfg.rewards["self_collisions"].weight == -0.5
+
+  assert height_cfg.rewards["motion_global_root_pos"].weight == 0.5
+  assert height_cfg.rewards["motion_global_root_ori"].weight == 0.5
+  assert height_cfg.rewards["self_collisions"].weight == -10.0
+
+
 def test_oracle_teacher_replaces_anchor_terms_with_pelvis_terms() -> None:
   cfg = unitree_g1_oracle_teacher_terrain_tracking_env_cfg()
 

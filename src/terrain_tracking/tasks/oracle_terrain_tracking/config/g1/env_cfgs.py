@@ -73,6 +73,12 @@ def _add_oracle_teacher_terms(cfg: ManagerBasedRlEnvCfg) -> None:
       terms[term_name] = _teacher_term(func)
 
 
+def _align_oracle_teacher_rewards_with_php(cfg: ManagerBasedRlEnvCfg) -> None:
+  cfg.rewards["motion_global_root_pos"].weight = 1.0
+  cfg.rewards["motion_global_root_ori"].weight = 1.0
+  cfg.rewards["self_collisions"].weight = -0.5
+
+
 def unitree_g1_oracle_height_terrain_tracking_env_cfg(
   play: bool = False,
 ) -> ManagerBasedRlEnvCfg:
@@ -85,5 +91,6 @@ def unitree_g1_oracle_teacher_terrain_tracking_env_cfg(
   play: bool = False,
 ) -> ManagerBasedRlEnvCfg:
   cfg = unitree_g1_oracle_height_terrain_tracking_env_cfg(play=play)
+  _align_oracle_teacher_rewards_with_php(cfg)
   _add_oracle_teacher_terms(cfg)
   return cfg
