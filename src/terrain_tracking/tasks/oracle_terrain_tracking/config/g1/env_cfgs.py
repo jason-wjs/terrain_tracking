@@ -57,6 +57,8 @@ def _add_oracle_teacher_terms(cfg: ManagerBasedRlEnvCfg) -> None:
   replaced_terms = {
     "motion_anchor_pos_b",
     "motion_anchor_ori_b",
+    "body_pos",
+    "body_ori",
     "base_lin_vel",
     "base_ang_vel",
     "global_anchor_pos_error_w",

@@ -27,6 +27,8 @@ ORACLE_TEACHER_TERMS = {
 REPLACED_TEACHER_TERMS = {
   "motion_anchor_pos_b",
   "motion_anchor_ori_b",
+  "body_pos",
+  "body_ori",
   "base_lin_vel",
   "base_ang_vel",
   "global_anchor_pos_error_w",
