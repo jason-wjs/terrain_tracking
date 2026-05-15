@@ -112,8 +112,8 @@ class _FakeMotionCommand:
     )
     self.body_quat_w = torch.tensor(
       [
-        [[1.0, 0.0, 0.0, 0.0], [1.0, 0.0, 0.0, 0.0]],
-        [[1.0, 0.0, 0.0, 0.0], [1.0, 0.0, 0.0, 0.0]],
+        [[1.0, 0.0, 0.0, 0.0], [0.70710678, 0.0, 0.0, 0.70710678]],
+        [[1.0, 0.0, 0.0, 0.0], [0.70710678, 0.0, 0.0, 0.70710678]],
       ],
       dtype=torch.float32,
     )
@@ -170,7 +170,14 @@ def test_teacher_pelvis_observation_functions_return_expected_values() -> None:
     oracle_obs.reference_pelvis_pos_error_b(env, "motion"),
     torch.full((2, 3), 0.5),
   )
-  assert oracle_obs.reference_pelvis_ori_error_b(env, "motion").shape == (2, 6)
+  assert torch.allclose(
+    oracle_obs.reference_pelvis_ori_error_b(env, "motion"),
+    torch.tensor(
+      [[0.0, -1.0, 1.0, 0.0, 0.0, 0.0], [0.0, -1.0, 1.0, 0.0, 0.0, 0.0]],
+      dtype=torch.float32,
+    ),
+    atol=1e-6,
+  )
   assert torch.allclose(
     oracle_obs.pelvis_lin_vel(env, "motion"),
     torch.tensor([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]], dtype=torch.float32),
