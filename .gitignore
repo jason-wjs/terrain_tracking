@@ -12,6 +12,7 @@ logs/
 wandb/
 *.log
 tea_debug.log
+docs/PHP.pdf
 
 # Legacy / local-only conversion code explicitly excluded from tracking
 src/terrain_tracking/data_conversion/
