@@ -6,12 +6,13 @@ from pathlib import Path
 import mujoco
 import numpy as np
 from mjlab.envs import ManagerBasedRlEnvCfg
+from mjlab.tasks.tracking.mdp import MotionCommandCfg
 from mjlab.terrains import SubTerrainCfg, TerrainEntityCfg, TerrainGeneratorCfg
 from mjlab.terrains.terrain_generator import TerrainGeometry, TerrainOutput
-from mjlab.tasks.tracking.mdp import MotionCommandCfg
 
 from terrain_tracking.runtime.pair_manifest import PairManifest
 from terrain_tracking.runtime.terrain_collision import TerrainCollisionManifest
+from terrain_tracking.scene.coacd_mesh_spec import make_coacd_mesh_spec_fn
 from terrain_tracking.scene.heightfield_spec import make_heightfield_spec_fn
 from terrain_tracking.scene.paired_mesh_spec import make_paired_mesh_spec_fn
 from terrain_tracking.scene.primitive_box_terrain import (
@@ -67,9 +68,9 @@ def apply_pair_manifest_to_env_cfg(
   *,
   collision_backend: CollisionBackend = "primitive_boxes",
 ) -> PairManifest:
-  if collision_backend not in {"primitive_boxes", "hfield", "mesh"}:
+  if collision_backend not in {"primitive_boxes", "hfield", "mesh", "coacd"}:
     raise ValueError(
-      "collision_backend must be one of: primitive_boxes, hfield, mesh; "
+      "collision_backend must be one of: primitive_boxes, hfield, mesh, coacd; "
       f"got {collision_backend!r}"
     )
 
@@ -80,7 +81,7 @@ def apply_pair_manifest_to_env_cfg(
     raise TypeError("Expected cfg.commands['motion'] to be a MotionCommandCfg")
 
   motion_cfg.motion_file = str(pair.motion_file)
-  if pair.terrain_collision_file is not None:
+  if pair.terrain_collision_file is not None or collision_backend == "coacd":
     _set_min_sim_contact_buffers(cfg, nconmax=256, njmax=512)
 
   if pair.terrain_collision_file is not None and collision_backend == "primitive_boxes":
@@ -112,7 +113,13 @@ def apply_pair_manifest_to_env_cfg(
   existing_spec_fn = cfg.scene.spec_fn
 
   def pair_spec_fn(spec) -> None:
-    if pair.terrain_collision_file is not None and collision_backend == "hfield":
+    if collision_backend == "coacd":
+      make_coacd_mesh_spec_fn(
+        pair,
+        num_envs=cfg.scene.num_envs,
+        env_spacing=cfg.scene.env_spacing,
+      )(spec)
+    elif pair.terrain_collision_file is not None and collision_backend == "hfield":
       make_heightfield_spec_fn(
         TerrainCollisionManifest.load(pair.terrain_collision_file),
         num_envs=cfg.scene.num_envs,

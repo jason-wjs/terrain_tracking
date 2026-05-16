@@ -149,6 +149,45 @@ def test_hfield_pair_rejects_env_spacing_smaller_than_terrain_footprint(
     cfg.scene.spec_fn(mujoco.MjSpec())
 
 
+def test_apply_pair_manifest_accepts_coacd_backend(
+  tmp_path: Path,
+  monkeypatch: pytest.MonkeyPatch,
+) -> None:
+  motion_path = create_motion_clip(tmp_path / "motion.npz")
+  terrain_path = create_ramp_obj(tmp_path / "terrain.obj")
+  manifest_path = create_pair_manifest(
+    tmp_path / "pair.json",
+    motion_file=motion_path.name,
+    terrain_file=terrain_path.name,
+  )
+  calls = []
+
+  def fake_make_coacd_mesh_spec_fn(pair, *, num_envs, env_spacing):
+    calls.append((pair, num_envs, env_spacing))
+    return lambda spec: None
+
+  monkeypatch.setattr(
+    "terrain_tracking.runtime.apply_pair.make_coacd_mesh_spec_fn",
+    fake_make_coacd_mesh_spec_fn,
+  )
+
+  cfg = unitree_g1_blind_terrain_tracking_env_cfg()
+  apply_pair_manifest_to_env_cfg(cfg, manifest_path, collision_backend="coacd")
+  cfg.scene.num_envs = 3
+  cfg.scene.env_spacing = 4.0
+
+  assert cfg.scene.spec_fn is not None
+  cfg.scene.spec_fn(mujoco.MjSpec())
+
+  assert len(calls) == 1
+  pair, num_envs, env_spacing = calls[0]
+  assert pair.terrain_file == terrain_path.resolve()
+  assert num_envs == 3
+  assert env_spacing == 4.0
+  assert cfg.sim.nconmax == 256
+  assert cfg.sim.njmax == 512
+
+
 def test_blind_terrain_tracking_env_can_reset_and_step_on_cpu(
   tmp_path: Path,
 ) -> None:
