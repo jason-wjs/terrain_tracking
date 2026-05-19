@@ -86,6 +86,23 @@ def test_convert_module_help_mentions_required_inputs() -> None:
   assert "--terrain-translation" in proc.stdout
 
 
+def test_convert_omniretarget_module_help_mentions_required_inputs() -> None:
+  proc = subprocess.run(
+    [
+      sys.executable,
+      "-m",
+      "terrain_tracking.convert_omniretarget_robot_terrain",
+      "--help",
+    ],
+    capture_output=True,
+    text=True,
+  )
+  assert proc.returncode == 0
+  assert "--motion-file" in proc.stdout
+  assert "--terrain-root" in proc.stdout
+  assert "--output-dir" in proc.stdout
+
+
 def test_convert_pair_shell_uses_collision_manifest_scale_source() -> None:
   script_path = Path(__file__).resolve().parents[1] / "scripts" / "convert_pair.sh"
   script = script_path.read_text(encoding="utf-8")

@@ -52,6 +52,7 @@ def create_omniretarget_qpos_clip(
   num_frames: int = 4,
   fps: int = 30,
 ) -> Path:
+  path.parent.mkdir(parents=True, exist_ok=True)
   qpos = np.zeros((num_frames, 36), dtype=np.float64)
   qpos[:, 0] = 1.0
   for frame in range(num_frames):
