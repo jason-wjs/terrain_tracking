@@ -20,8 +20,10 @@ from terrain_tracking.tasks.blind_terrain_tracking.scripts.common import (
   build_paired_env,
 )
 from tests.helpers import (
+  create_box_obj,
   create_heightfield_collision_manifest,
   create_motion_clip,
+  create_omniretarget_terrain_urdf,
   create_pair_manifest,
   create_ramp_obj,
 )
@@ -147,6 +149,41 @@ def test_hfield_pair_rejects_env_spacing_smaller_than_terrain_footprint(
   assert cfg.scene.spec_fn is not None
   with pytest.raises(ValueError, match="env_spacing"):
     cfg.scene.spec_fn(mujoco.MjSpec())
+
+
+def test_apply_pair_manifest_supports_omniretarget_boxes_backend(
+  tmp_path: Path,
+) -> None:
+  motion_path = create_motion_clip(tmp_path / "motion.npz")
+  terrain_dir = tmp_path / "climb_00"
+  create_box_obj(terrain_dir / "box_models" / "box1.obj")
+  terrain_path = create_omniretarget_terrain_urdf(
+    terrain_dir / "multi_boxes_z_scale_1.0.urdf"
+  )
+  manifest_path = create_pair_manifest(
+    tmp_path / "pair.json",
+    motion_file=motion_path.name,
+    terrain_file=str(terrain_path),
+  )
+
+  cfg = unitree_g1_blind_terrain_tracking_env_cfg()
+  returned_manifest = apply_pair_manifest_to_env_cfg(
+    cfg,
+    manifest_path,
+    collision_backend="omniretarget_boxes",
+  )
+
+  assert returned_manifest.terrain_file == terrain_path.resolve()
+  assert cfg.scene.spec_fn is not None
+  spec = mujoco.MjSpec()
+  cfg.scene.spec_fn(spec)
+  model = spec.compile()
+  geom_names = [
+    mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, geom_id)
+    for geom_id in range(model.ngeom)
+  ]
+  assert "omniretarget_ground" in geom_names
+  assert "omniretarget_box1" in geom_names
 
 
 def test_blind_terrain_tracking_env_can_reset_and_step_on_cpu(
