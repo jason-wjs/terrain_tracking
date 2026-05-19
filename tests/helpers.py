@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 
 import numpy as np
@@ -93,6 +94,93 @@ def create_ramp_obj(path: Path) -> Path:
         "v 0.0 1.0 0.0",
         "f 1 2 3",
         "f 1 3 4",
+      ]
+    )
+    + "\n",
+    encoding="utf-8",
+  )
+  return path
+
+
+def create_box_obj(
+  path: Path,
+  *,
+  half_size: tuple[float, float, float] = (0.5, 0.25, 0.2),
+  center: tuple[float, float, float] = (0.0, 0.0, 0.2),
+  yaw: float = 0.0,
+) -> Path:
+  path.parent.mkdir(parents=True, exist_ok=True)
+  hx, hy, hz = half_size
+  cx, cy, cz = center
+  rot = np.array(
+    [
+      [math.cos(yaw), -math.sin(yaw), 0.0],
+      [math.sin(yaw), math.cos(yaw), 0.0],
+      [0.0, 0.0, 1.0],
+    ],
+    dtype=np.float64,
+  )
+  local = np.array(
+    [
+      [-hx, -hy, -hz],
+      [-hx, -hy, hz],
+      [-hx, hy, -hz],
+      [-hx, hy, hz],
+      [hx, -hy, -hz],
+      [hx, -hy, hz],
+      [hx, hy, -hz],
+      [hx, hy, hz],
+    ],
+    dtype=np.float64,
+  )
+  vertices = local @ rot.T + np.array([cx, cy, cz], dtype=np.float64)
+  faces = [
+    (1, 5, 7),
+    (1, 7, 3),
+    (2, 4, 8),
+    (2, 8, 6),
+    (1, 2, 6),
+    (1, 6, 5),
+    (3, 7, 8),
+    (3, 8, 4),
+    (1, 3, 4),
+    (1, 4, 2),
+    (5, 6, 8),
+    (5, 8, 7),
+  ]
+  lines = [f"v {x:.8f} {y:.8f} {z:.8f}" for x, y, z in vertices]
+  lines.extend(f"f {a} {b} {c}" for a, b, c in faces)
+  path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+  return path
+
+
+def create_omniretarget_terrain_urdf(
+  path: Path,
+  *,
+  mesh_name: str = "box1.obj",
+  scale: tuple[float, float, float] = (1.0, 1.0, 1.0),
+) -> Path:
+  sx, sy, sz = scale
+  path.parent.mkdir(parents=True, exist_ok=True)
+  (path.parent / "box_models").mkdir(exist_ok=True)
+  path.write_text(
+    "\n".join(
+      [
+        '<?xml version="1.0"?>',
+        '<robot name="multi_boxes">',
+        '  <link name="box1_link">',
+        "    <visual>",
+        '      <geometry>',
+        f'        <mesh filename="box_models/{mesh_name}" scale="{sx} {sy} {sz}"/>',
+        '      </geometry>',
+        "    </visual>",
+        '    <collision name="box1">',
+        '      <geometry>',
+        f'        <mesh filename="box_models/{mesh_name}" scale="{sx} {sy} {sz}"/>',
+        '      </geometry>',
+        "    </collision>",
+        "  </link>",
+        "</robot>",
       ]
     )
     + "\n",
