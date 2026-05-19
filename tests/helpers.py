@@ -45,6 +45,26 @@ def create_motion_clip(
   return path
 
 
+def create_omniretarget_qpos_clip(
+  path: Path,
+  *,
+  num_frames: int = 4,
+  fps: int = 30,
+) -> Path:
+  qpos = np.zeros((num_frames, 36), dtype=np.float64)
+  qpos[:, 0] = 1.0
+  for frame in range(num_frames):
+    qpos[frame, 4:7] = (0.1 * frame, -0.05 * frame, 0.8 + 0.02 * frame)
+    qpos[frame, 7:] = np.linspace(
+      0.0,
+      0.28,
+      29,
+      dtype=np.float64,
+    ) + 0.01 * frame
+  np.savez(path, qpos=qpos, fps=np.array(fps, dtype=np.int32))
+  return path
+
+
 def create_quad_obj(path: Path) -> Path:
   path.write_text(
     "\n".join(
