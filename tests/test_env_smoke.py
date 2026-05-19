@@ -12,6 +12,10 @@ from terrain_tracking.convert_pair import (
   ConvertPairConfig,
   convert_pair,
 )
+from terrain_tracking.convert_omniretarget_robot_terrain import (
+  ConvertOmniRetargetRobotTerrainConfig,
+  convert_omniretarget_robot_terrain,
+)
 from terrain_tracking.runtime.apply_pair import apply_pair_manifest_to_env_cfg
 from terrain_tracking.tasks.blind_terrain_tracking.config.g1.env_cfgs import (
   unitree_g1_blind_terrain_tracking_env_cfg,
@@ -23,6 +27,7 @@ from tests.helpers import (
   create_box_obj,
   create_heightfield_collision_manifest,
   create_motion_clip,
+  create_omniretarget_qpos_clip,
   create_omniretarget_terrain_urdf,
   create_pair_manifest,
   create_ramp_obj,
@@ -218,6 +223,51 @@ def test_blind_terrain_tracking_env_can_reset_and_step_on_cpu(
   assert timeouts.shape == (1,)
   assert isinstance(extras, dict)
   env.close()
+
+
+def test_omniretarget_boxes_env_can_reset_and_step_on_cpu(
+  tmp_path: Path,
+) -> None:
+  dataset_root = tmp_path / "OmniRetarget_Dataset"
+  motion_path = create_omniretarget_qpos_clip(
+    dataset_root / "robot-terrain" / "climb_00_z_scale_1.0.npz",
+    num_frames=4,
+  )
+  terrain_dir = dataset_root / "models" / "terrain" / "climb_00"
+  create_box_obj(terrain_dir / "box_models" / "box1.obj")
+  create_omniretarget_terrain_urdf(terrain_dir / "multi_boxes_z_scale_1.0.urdf")
+  bundle_dir = convert_omniretarget_robot_terrain(
+    ConvertOmniRetargetRobotTerrainConfig(
+      motion_file=motion_path,
+      terrain_root=dataset_root / "models" / "terrain",
+      output_dir=tmp_path / "converted",
+      sample_name="climb_00_z_scale_1.0",
+    )
+  )
+
+  env, _agent_cfg = build_paired_env(
+    "TT-Tracking-TerrainBlind-Unitree-G1",
+    str(bundle_dir / "pair.json"),
+    play=True,
+    device="cpu",
+    num_envs=1,
+    no_terminations=True,
+    collision_backend="omniretarget_boxes",
+  )
+  try:
+    obs, _extras = env.reset()
+    assert set(obs.keys()) == {"actor", "critic"}
+
+    action_dim = env.unwrapped.single_action_space.shape[0]
+    action = torch.zeros((1, action_dim), dtype=torch.float32, device=env.device)
+    obs, reward, terminated, timeouts, extras = env.step(action)
+    assert obs["actor"].shape[0] == 1
+    assert reward.shape == (1,)
+    assert terminated.shape == (1,)
+    assert timeouts.shape == (1,)
+    assert isinstance(extras, dict)
+  finally:
+    env.close()
 
 
 def test_converted_pair_bundle_loads(tmp_path: Path) -> None:

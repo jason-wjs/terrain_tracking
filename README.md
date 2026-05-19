@@ -30,6 +30,42 @@ uv run python -m terrain_tracking.convert_pair \
 
 When `terrain_collision_file` is present, `multi_boxes.obj` is not used as the collision source. See `docs/terrain-collision-contract.md`.
 
+## OmniRetarget Robot-Terrain Samples
+
+Convert one OmniRetarget `robot-terrain` sample into a regular pair bundle:
+
+```bash
+uv run python -m terrain_tracking.convert_omniretarget_robot_terrain \
+  --motion-file /path/to/OmniRetarget_Dataset/robot-terrain/climb_00_z_scale_1.0.npz \
+  --terrain-root /path/to/OmniRetarget_Dataset/models/terrain \
+  --output-dir /tmp/tt_converted_omniretarget \
+  --sample-name climb_00_z_scale_1.0
+```
+
+The converter writes:
+
+```text
+/tmp/tt_converted_omniretarget/climb_00_z_scale_1.0/
+  motion.npz
+  pair.json
+  meta.json
+```
+
+Train or play the converted pair with the OmniRetarget box backend:
+
+```bash
+uv run python -m terrain_tracking.tasks.blind_terrain_tracking.scripts.train \
+  --pair-manifest /tmp/tt_converted_omniretarget/climb_00_z_scale_1.0/pair.json \
+  --collision-backend omniretarget_boxes \
+  --task TT-Tracking-TerrainOracleHeight-Unitree-G1 \
+  --env.scene.num-envs 1 \
+  --agent.max-iterations 1
+```
+
+`omniretarget_boxes` reads the OmniRetarget terrain URDF and creates MuJoCo
+primitive box collision geoms. It does not use the PARC heightfield
+`terrain_collision.json` path.
+
 ## Oracle Perception Tasks
 
 This package also registers oracle perception tracking tasks for the current height-map stage:
