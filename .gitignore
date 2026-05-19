@@ -12,7 +12,11 @@ logs/
 wandb/
 *.log
 tea_debug.log
+MUJOCO_LOG.TXT
 docs/PHP.pdf
+
+# Local agent/session state
+.codex
 
 # Legacy / local-only conversion code explicitly excluded from tracking
 src/terrain_tracking/data_conversion/

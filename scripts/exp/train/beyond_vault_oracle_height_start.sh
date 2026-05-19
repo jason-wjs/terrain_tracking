@@ -12,4 +12,4 @@ COLLISION_BACKEND="${COLLISION_BACKEND:-primitive_boxes}" \
 SAMPLING_MODE="${SAMPLING_MODE:-start}" \
 NUM_ENVS="${NUM_ENVS:-32768}" \
 MAX_ITERATIONS="${MAX_ITERATIONS:-100000}" \
-"${SCRIPT_DIR}/../train.sh" "$@"
+"${SCRIPT_DIR}/../../train.sh" "$@"
