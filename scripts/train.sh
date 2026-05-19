@@ -29,6 +29,7 @@ uv run python -m terrain_tracking.tasks.blind_terrain_tracking.scripts.train \
   --env.commands.motion.sampling-mode "${SAMPLING_MODE}" \
   --pair-manifest "${PAIR_MANIFEST}" \
   --env.scene.num-envs "${NUM_ENVS}" \
+  --env.scene.env-spacing 12.0 \
   --agent.max-iterations "${MAX_ITERATIONS}" \
   --gpu-ids "${GPU_IDS}" \
   "$@"
