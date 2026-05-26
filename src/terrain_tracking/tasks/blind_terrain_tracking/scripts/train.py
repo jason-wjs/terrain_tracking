@@ -32,18 +32,17 @@ def main() -> None:
   )
 
   train_cfg = MjlabTrainConfig.from_task(frontend.task)
-  apply_pair_manifest_to_env_cfg(
-    train_cfg.env,
-    frontend.pair_manifest,
-    collision_backend=frontend.collision_backend,
-  )
-
   args = tyro.cli(
     MjlabTrainConfig,
     args=remaining_args,
     default=train_cfg,
     prog=sys.argv[0],
     config=mjlab.TYRO_FLAGS,
+  )
+  apply_pair_manifest_to_env_cfg(
+    args.env,
+    frontend.pair_manifest,
+    collision_backend=frontend.collision_backend,
   )
   launch_training(task_id=frontend.task, args=args)
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import cast
 
 import mujoco
 import numpy as np
@@ -48,7 +49,11 @@ def _rotation_matrix_from_xyzw(quat_xyzw: tuple[float, float, float, float]) -> 
 def _load_mesh_arrays(
   manifest: PairManifest,
 ) -> tuple[np.ndarray, np.ndarray]:
-  mesh = _as_trimesh(trimesh.load(manifest.terrain_file, force="mesh"))
+  mesh_or_scene = cast(
+    trimesh.Trimesh | trimesh.Scene,
+    trimesh.load(manifest.terrain_file, force="mesh"),
+  )
+  mesh = _as_trimesh(mesh_or_scene)
 
   vertices = np.asarray(mesh.vertices, dtype=np.float32).copy()
   faces = np.asarray(mesh.faces, dtype=np.int32).copy()

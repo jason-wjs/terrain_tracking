@@ -216,7 +216,7 @@ def emit_mjlab_motion_npz(
     body_quat_w[frame] = data.xquat[1:].astype(np.float32)
 
   dt = 1.0 / float(output_fps)
-  body_lin_vel_w = np.gradient(body_pos_w, dt, axis=0).astype(np.float32)
+  body_lin_vel_w = np.asarray(np.gradient(body_pos_w, dt, axis=0), dtype=np.float32)
   body_ang_vel_w = _angular_velocity_from_quats(body_quat_w.astype(np.float64), dt)
 
   output_path = Path(output_path)

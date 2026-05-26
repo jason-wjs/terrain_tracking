@@ -9,6 +9,8 @@ from pathlib import Path
 import mujoco
 import numpy as np
 
+from terrain_tracking.scene.paired_mesh_spec import compute_env_origins_grid
+
 
 @dataclass(frozen=True)
 class OmniRetargetBox:
@@ -99,7 +101,8 @@ def _iter_collision_meshes(
     mesh_file = (urdf_path.parent / filename).resolve()
     if not mesh_file.exists():
       raise FileNotFoundError(mesh_file)
-    key = (mesh_file, tuple(float(v) for v in scale))
+    scale_key = (float(scale[0]), float(scale[1]), float(scale[2]))
+    key = (mesh_file, scale_key)
     if key in seen:
       continue
     seen.add(key)
@@ -153,10 +156,16 @@ def make_omniretarget_boxes_spec_fn(
   urdf_path: str | Path,
   *,
   motion_file: str | Path | None = None,
+  num_envs: int = 1,
+  env_spacing: float = 0.0,
   ground_margin: float = 1.0,
   ground_depth: float = 0.1,
 ) -> Callable[[mujoco.MjSpec], None]:
   boxes = load_omniretarget_terrain_boxes(urdf_path)
+  if num_envs == 1 or env_spacing == 0.0:
+    env_origins = np.zeros((1, 3), dtype=np.float32)
+  else:
+    env_origins = compute_env_origins_grid(num_envs=num_envs, env_spacing=env_spacing)
   ground_min, ground_max = _bounds_for_ground(
     boxes,
     motion_file=motion_file,
@@ -166,26 +175,32 @@ def make_omniretarget_boxes_spec_fn(
   ground_size = 0.5 * (ground_max - ground_min)
 
   def spec_fn(spec: mujoco.MjSpec) -> None:
-    body = spec.worldbody.add_body(name="omniretarget_terrain")
-    ground = body.add_geom(
-      name="omniretarget_ground",
-      type=mujoco.mjtGeom.mjGEOM_BOX,
-      pos=(float(ground_center[0]), float(ground_center[1]), -0.5 * ground_depth),
-      size=(float(ground_size[0]), float(ground_size[1]), 0.5 * ground_depth),
-      contype=1,
-      conaffinity=1,
-    )
-    ground.mass = 0
-    for box in boxes:
-      geom = body.add_geom(
-        name=f"omniretarget_{box.name}",
+    shared_terrain = len(env_origins) == 1
+    for env_id, env_origin in enumerate(env_origins):
+      suffix = "" if shared_terrain else f"_{env_id}"
+      body = spec.worldbody.add_body(
+        name=f"omniretarget_terrain{suffix}",
+        pos=env_origin.tolist(),
+      )
+      ground = body.add_geom(
+        name=f"omniretarget_ground{suffix}",
         type=mujoco.mjtGeom.mjGEOM_BOX,
-        pos=box.pos,
-        size=box.size,
-        quat=_yaw_quat_wxyz(box.yaw),
+        pos=(float(ground_center[0]), float(ground_center[1]), -0.5 * ground_depth),
+        size=(float(ground_size[0]), float(ground_size[1]), 0.5 * ground_depth),
         contype=1,
         conaffinity=1,
       )
-      geom.mass = 0
+      ground.mass = 0
+      for box in boxes:
+        geom = body.add_geom(
+          name=f"omniretarget_{box.name}{suffix}",
+          type=mujoco.mjtGeom.mjGEOM_BOX,
+          pos=box.pos,
+          size=box.size,
+          quat=_yaw_quat_wxyz(box.yaw),
+          contype=1,
+          conaffinity=1,
+        )
+        geom.mass = 0
 
   return spec_fn

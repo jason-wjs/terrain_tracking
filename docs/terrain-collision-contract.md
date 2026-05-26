@@ -70,3 +70,24 @@ terrain_tracking supports these runtime backends:
 
 For large training, terrain geoms should scale with unique terrain tiles, not
 with `num_envs`.
+
+## Defaults And Decisions
+
+When `terrain_collision_file` is present:
+
+- Default runtime backend: `primitive_boxes`.
+- Collision scale comes from the manifest's `xy_scale` and `height_scale`, not
+  from legacy `pair.json` mesh fields. See `pair-manifest-terrain-params.md`.
+- `multi_boxes.obj` is visual/debug only on this path.
+
+Backend selection:
+
+| Backend | Role |
+| --- | --- |
+| `primitive_boxes` | Default PARC training path; one shared terrain tile via mjlab generator |
+| `hfield` | Debug only; do not use as default PARC training backend |
+| `mesh` | Legacy fallback when no collision manifest exists |
+| `omniretarget_boxes` | OmniRetarget URDF terrain; separate input contract from PARC manifests |
+
+Unstable work, open risks, and rationale are tracked in
+`terrain-collision-status.md`.

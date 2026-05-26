@@ -16,6 +16,12 @@ Play a paired motion in the terrain scene with a dummy policy:
 bash scripts/play.sh --pair-manifest /abs/path/to/pair.json --agent zero
 ```
 
+Reusable shell launchers live under `scripts/`:
+
+- `scripts/convert.sh`, `scripts/train.sh`, and `scripts/play.sh` are the stable launch entry points.
+- `scripts/exp/convert/*.sh`, `scripts/exp/train/*.sh`, and `scripts/exp/play/*.sh` are one-command presets.
+- `scripts/lib/common.sh` holds the shared launch implementation used by all shell entry points.
+
 Create a pair bundle that uses heightfield collision:
 
 ```bash
@@ -28,7 +34,21 @@ uv run python -m terrain_tracking.convert_pair \
   --sample-name platform_001
 ```
 
-When `terrain_collision_file` is present, `multi_boxes.obj` is not used as the collision source. See `docs/terrain-collision-contract.md`.
+The same conversion is available through the shell entry point:
+
+```bash
+CONVERT_KIND=pair \
+MOTION_FILE=/tmp/tt_converted/platform_001/motion.npz \
+TERRAIN_FILE=/tmp/parc_process_workspace/workspace/platform_001/multi_boxes.obj \
+TERRAIN_COLLISION_FILE=/tmp/parc_process_workspace/workspace/platform_001/terrain_collision.json \
+TERRAIN_VISUAL_FILE=/tmp/parc_process_workspace/workspace/platform_001/multi_boxes.obj \
+SAMPLE_NAME=platform_001 \
+bash scripts/convert.sh
+```
+
+When `terrain_collision_file` is present, `multi_boxes.obj` is not used as the collision source. See [terrain collision contract](docs/terrain-collision-contract.md) and [status](docs/terrain-collision-status.md).
+
+Pair manifest terrain parameters are documented in [pair-manifest-terrain-params.md](docs/pair-manifest-terrain-params.md). Repository domain terms are defined in `CONTEXT.md`.
 
 ## OmniRetarget Robot-Terrain Samples
 
@@ -40,6 +60,16 @@ uv run python -m terrain_tracking.convert_omniretarget_robot_terrain \
   --terrain-root /path/to/OmniRetarget_Dataset/models/terrain \
   --output-dir /tmp/tt_converted_omniretarget \
   --sample-name climb_00_z_scale_1.0
+```
+
+The shell entry point supports the OmniRetarget converter too:
+
+```bash
+CONVERT_KIND=omniretarget_robot_terrain \
+MOTION_FILE=/path/to/OmniRetarget_Dataset/robot-terrain/climb_00_z_scale_1.0.npz \
+TERRAIN_ROOT=/path/to/OmniRetarget_Dataset/models/terrain \
+SAMPLE_NAME=climb_00_z_scale_1.0 \
+bash scripts/convert.sh
 ```
 
 The converter writes:
@@ -88,3 +118,14 @@ uv run python -m terrain_tracking.tasks.blind_terrain_tracking.scripts.train \
   --pair-manifest /abs/path/to/pair.json \
   --task TT-Tracking-TerrainOracleTeacher-Unitree-G1
 ```
+
+## Development Checks
+
+```bash
+uv run ruff check .
+uv run pyright
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 uv run pytest -q
+```
+
+`PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` keeps unrelated globally installed pytest
+plugins out of the test run.

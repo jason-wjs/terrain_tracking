@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from torch import Tensor
-
 from mjlab.tasks.tracking.mdp import MotionCommand
 from mjlab.utils.lab_api.math import matrix_from_quat, subtract_frame_transforms
+from torch import Tensor
 
 
 def _motion_command(env: Any, command_name: str) -> MotionCommand:

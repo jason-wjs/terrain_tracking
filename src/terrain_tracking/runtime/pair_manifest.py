@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 
 def _required_path(
@@ -47,6 +47,30 @@ def _float_tuple(
   return tuple(float(v) for v in value)
 
 
+def _float3_tuple(
+  payload: dict[str, Any],
+  *,
+  key: str,
+  default: tuple[float, float, float],
+) -> tuple[float, float, float]:
+  return cast(
+    tuple[float, float, float],
+    _float_tuple(payload, key=key, length=3, default=default),
+  )
+
+
+def _float4_tuple(
+  payload: dict[str, Any],
+  *,
+  key: str,
+  default: tuple[float, float, float, float],
+) -> tuple[float, float, float, float]:
+  return cast(
+    tuple[float, float, float, float],
+    _float_tuple(payload, key=key, length=4, default=default),
+  )
+
+
 @dataclass(frozen=True)
 class PairManifest:
   motion_file: Path
@@ -84,22 +108,19 @@ class PairManifest:
         key="terrain_visual_file",
         manifest_path=manifest_path,
       ),
-      terrain_translation=_float_tuple(
+      terrain_translation=_float3_tuple(
         payload,
         key="terrain_translation",
-        length=3,
         default=(0.0, 0.0, 0.0),
       ),
-      terrain_quat_xyzw=_float_tuple(
+      terrain_quat_xyzw=_float4_tuple(
         payload,
         key="terrain_quat_xyzw",
-        length=4,
         default=(0.0, 0.0, 0.0, 1.0),
       ),
-      terrain_scale=_float_tuple(
+      terrain_scale=_float3_tuple(
         payload,
         key="terrain_scale",
-        length=3,
         default=(1.0, 1.0, 1.0),
       ),
     )

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import cast
 
 import mujoco
 import pytest
@@ -8,13 +9,13 @@ import torch
 from mjlab.envs import ManagerBasedRlEnv
 from mjlab.tasks.tracking.mdp import MotionCommandCfg
 
-from terrain_tracking.convert_pair import (
-  ConvertPairConfig,
-  convert_pair,
-)
 from terrain_tracking.convert_omniretarget_robot_terrain import (
   ConvertOmniRetargetRobotTerrainConfig,
   convert_omniretarget_robot_terrain,
+)
+from terrain_tracking.convert_pair import (
+  ConvertPairConfig,
+  convert_pair,
 )
 from terrain_tracking.runtime.apply_pair import apply_pair_manifest_to_env_cfg
 from terrain_tracking.tasks.blind_terrain_tracking.config.g1.env_cfgs import (
@@ -191,6 +192,41 @@ def test_apply_pair_manifest_supports_omniretarget_boxes_backend(
   assert "omniretarget_box1" in geom_names
 
 
+def test_omniretarget_boxes_backend_uses_shared_zero_spacing_terrain(
+  tmp_path: Path,
+) -> None:
+  motion_path = create_motion_clip(tmp_path / "motion.npz")
+  terrain_dir = tmp_path / "climb_00"
+  create_box_obj(terrain_dir / "box_models" / "box1.obj")
+  terrain_path = create_omniretarget_terrain_urdf(
+    terrain_dir / "multi_boxes_z_scale_1.0.urdf"
+  )
+  manifest_path = create_pair_manifest(
+    tmp_path / "pair.json",
+    motion_file=motion_path.name,
+    terrain_file=str(terrain_path),
+  )
+
+  cfg = unitree_g1_blind_terrain_tracking_env_cfg()
+  cfg.scene.num_envs = 4
+  cfg.scene.env_spacing = 12.0
+  apply_pair_manifest_to_env_cfg(
+    cfg,
+    manifest_path,
+    collision_backend="omniretarget_boxes",
+  )
+
+  assert cfg.scene.env_spacing == 0.0
+  assert cfg.scene.spec_fn is not None
+  spec = mujoco.MjSpec()
+  cfg.scene.spec_fn(spec)
+
+  terrain_bodies = [
+    body for body in spec.worldbody.bodies if body.name.startswith("omniretarget_terrain")
+  ]
+  assert len(terrain_bodies) == 1
+
+
 def test_blind_terrain_tracking_env_can_reset_and_step_on_cpu(
   tmp_path: Path,
 ) -> None:
@@ -217,7 +253,8 @@ def test_blind_terrain_tracking_env_can_reset_and_step_on_cpu(
   action_dim = env.unwrapped.single_action_space.shape[0]
   action = torch.zeros((1, action_dim), dtype=torch.float32, device=env.device)
   obs, reward, terminated, timeouts, extras = env.step(action)
-  assert obs["actor"].shape[0] == 1
+  actor_obs = cast(torch.Tensor, obs["actor"])
+  assert actor_obs.shape[0] == 1
   assert reward.shape == (1,)
   assert terminated.shape == (1,)
   assert timeouts.shape == (1,)
@@ -261,7 +298,8 @@ def test_omniretarget_boxes_env_can_reset_and_step_on_cpu(
     action_dim = env.unwrapped.single_action_space.shape[0]
     action = torch.zeros((1, action_dim), dtype=torch.float32, device=env.device)
     obs, reward, terminated, timeouts, extras = env.step(action)
-    assert obs["actor"].shape[0] == 1
+    actor_obs = cast(torch.Tensor, obs["actor"])
+    assert actor_obs.shape[0] == 1
     assert reward.shape == (1,)
     assert terminated.shape == (1,)
     assert timeouts.shape == (1,)
@@ -495,8 +533,10 @@ def test_oracle_terrain_tracking_env_can_reset_and_step_on_cpu(
       blind_obs, _blind_extras = blind_env.reset()
       oracle_obs, _oracle_extras = oracle_env.reset()
 
-      blind_actor_dim = blind_obs["actor"].shape[-1]
-      oracle_actor_dim = oracle_obs["actor"].shape[-1]
+      blind_actor = cast(torch.Tensor, blind_obs["actor"])
+      oracle_actor = cast(torch.Tensor, oracle_obs["actor"])
+      blind_actor_dim = blind_actor.shape[-1]
+      oracle_actor_dim = oracle_actor.shape[-1]
       assert oracle_actor_dim >= blind_actor_dim + min_extra_actor_dims
 
       action_dim = oracle_env.unwrapped.single_action_space.shape[0]
@@ -508,7 +548,8 @@ def test_oracle_terrain_tracking_env_can_reset_and_step_on_cpu(
       oracle_obs, reward, terminated, timeouts, extras = oracle_env.step(action)
 
       assert set(oracle_obs.keys()) == {"actor", "critic"}
-      assert oracle_obs["actor"].shape[0] == 1
+      oracle_actor = cast(torch.Tensor, oracle_obs["actor"])
+      assert oracle_actor.shape[0] == 1
       assert reward.shape == (1,)
       assert terminated.shape == (1,)
       assert timeouts.shape == (1,)

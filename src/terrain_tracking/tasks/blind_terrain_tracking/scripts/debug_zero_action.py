@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import cast
 
 import torch
 import tyro
-from mjlab.tasks.tracking.mdp import MotionCommandCfg
+from mjlab.tasks.tracking.mdp import MotionCommand, MotionCommandCfg
 
 from terrain_tracking.tasks.blind_terrain_tracking.scripts.common import (
   DEFAULT_TASK_ID,
@@ -36,7 +37,7 @@ def main() -> None:
     collision_backend=args.collision_backend,
   )
   try:
-    cmd = env.command_manager.get_term("motion")
+    cmd = cast(MotionCommand, env.command_manager.get_term("motion"))
     assert isinstance(cmd.cfg, MotionCommandCfg)
     cmd.cfg.sampling_mode = "start"
     body_names = list(cmd.cfg.body_names)

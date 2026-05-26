@@ -1,7 +1,12 @@
 """Runtime helpers for terrain_tracking."""
 
+from typing import TYPE_CHECKING
+
 from .pair_manifest import PairManifest
 from .terrain_collision import TerrainCollisionManifest
+
+if TYPE_CHECKING:
+  from .apply_pair import apply_pair_manifest_to_env_cfg
 
 __all__ = [
   "PairManifest",

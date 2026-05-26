@@ -76,3 +76,24 @@ def test_make_omniretarget_boxes_spec_fn_compiles_box_geoms(
   assert "omniretarget_ground" in geom_names
   assert "omniretarget_box1" in geom_names
   assert all(geom_type == mujoco.mjtGeom.mjGEOM_BOX for geom_type in model.geom_type)
+
+
+def test_make_omniretarget_boxes_spec_fn_uses_one_shared_terrain_when_spacing_is_zero(
+  tmp_path: Path,
+) -> None:
+  terrain_dir = tmp_path / "climb_00"
+  create_box_obj(terrain_dir / "box_models" / "box1.obj")
+  urdf = create_omniretarget_terrain_urdf(
+    terrain_dir / "multi_boxes_z_scale_1.0.urdf"
+  )
+  spec = mujoco.MjSpec()
+
+  make_omniretarget_boxes_spec_fn(urdf, num_envs=4, env_spacing=0.0)(spec)
+
+  assert len(spec.worldbody.bodies) == 1
+  body = spec.worldbody.bodies[0]
+  assert body.name == "omniretarget_terrain"
+  assert [geom.name for geom in body.geoms] == [
+    "omniretarget_ground",
+    "omniretarget_box1",
+  ]
