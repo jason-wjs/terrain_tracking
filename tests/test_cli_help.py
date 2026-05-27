@@ -66,6 +66,38 @@ def test_play_module_help_mentions_collision_backend() -> None:
   assert "--collision-backend" in proc.stdout
 
 
+def test_general_train_module_help_mentions_pair_dataset() -> None:
+  proc = subprocess.run(
+    [
+      sys.executable,
+      "-m",
+      "terrain_tracking.tasks.general_terrain_tracking.scripts.train",
+      "--help",
+    ],
+    check=True,
+    capture_output=True,
+    text=True,
+  )
+  assert "--pair-dataset" in proc.stdout
+  assert "--pair-sampler-mode" in proc.stdout
+
+
+def test_general_play_module_help_mentions_pair_dataset() -> None:
+  proc = subprocess.run(
+    [
+      sys.executable,
+      "-m",
+      "terrain_tracking.tasks.general_terrain_tracking.scripts.play",
+      "--help",
+    ],
+    check=True,
+    capture_output=True,
+    text=True,
+  )
+  assert "--pair-dataset" in proc.stdout
+  assert "--dataset-validate" in proc.stdout
+
+
 def test_convert_module_help_mentions_required_inputs() -> None:
   proc = subprocess.run(
     [
@@ -145,6 +177,31 @@ def test_convert_exp_scripts_call_shared_convert_function() -> None:
     script = script_path.read_text(encoding="utf-8")
     assert "tt_convert_exp" in script
     assert "uv run python -m terrain_tracking.convert_" not in script
+
+
+def test_general_mid_blocks_exp_scripts_target_pair_dataset_training() -> None:
+  scripts_root = Path(__file__).resolve().parents[1] / "scripts"
+  common = (scripts_root / "lib" / "common.sh").read_text(encoding="utf-8")
+  convert_script = (
+    scripts_root / "exp" / "convert" / "parc_mid_blocks_dataset.sh"
+  ).read_text(encoding="utf-8")
+  train_script = (
+    scripts_root / "exp" / "train" / "mid_blocks_general_oracle_teacher_adaptive.sh"
+  ).read_text(encoding="utf-8")
+
+  assert "tt_convert_parc_pair_dataset" in common
+  assert "terrain_tracking.build_pair_dataset" in common
+  assert "tt_train_general_pair_dataset_exp" in common
+  assert "terrain_tracking.tasks.general_terrain_tracking.scripts.train" in common
+  assert "--pair-dir-name-prefix" in common
+  assert "--include-path-part" in common
+  assert "CONVERT_KIND=\"${CONVERT_KIND:-parc_pair_dataset}\"" in convert_script
+  assert "PAIR_DIR_NAME_PREFIX=\"${PAIR_DIR_NAME_PREFIX:-mid_blocks}\"" in convert_script
+  assert "INCLUDE_PATH_PARTS=\"${INCLUDE_PATH_PARTS:-mj/mid_climbing}\"" in convert_script
+  assert "tt_convert_exp" in convert_script
+  assert "TT-Tracking-TerrainOracleTeacherGeneral-Unitree-G1" in train_script
+  assert "PAIR_DATASET=\"${PAIR_DATASET:-" in train_script
+  assert "tt_train_general_pair_dataset_exp" in train_script
 
 
 def test_obsolete_debug_shell_scripts_are_removed() -> None:

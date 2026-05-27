@@ -269,6 +269,37 @@ tt_convert_omniretarget_robot_terrain() {
     "$@"
 }
 
+tt_convert_parc_pair_dataset() {
+  local source="${SOURCE:-parc}"
+  local parc_root="${PARC_ROOT:-/home/humanoid/Downloads/Data/parc_initial_aug_g1}"
+  local output_file="${OUTPUT_FILE:-${parc_root}/pair_dataset.jsonl}"
+  local pair_dir_name_prefix="${PAIR_DIR_NAME_PREFIX:-}"
+  local include_path_parts="${INCLUDE_PATH_PARTS:-}"
+
+  tt_cd_repo_root
+  tt_require_dir "${parc_root}" "PARC root"
+
+  local -a build_args=(
+    --source "${source}"
+    --root "${parc_root}"
+    --output "${output_file}"
+  )
+
+  if [[ -n "${pair_dir_name_prefix}" ]]; then
+    build_args+=(--pair-dir-name-prefix "${pair_dir_name_prefix}")
+  fi
+
+  if [[ -n "${include_path_parts}" ]]; then
+    local -a include_path_part_args
+    read -r -a include_path_part_args <<< "${include_path_parts}"
+    for include_path_part in "${include_path_part_args[@]}"; do
+      build_args+=(--include-path-part "${include_path_part}")
+    done
+  fi
+
+  uv run python -m terrain_tracking.build_pair_dataset "${build_args[@]}" "$@"
+}
+
 tt_convert_exp() {
   local convert_kind="${CONVERT_KIND:-pair}"
 
@@ -279,10 +310,55 @@ tt_convert_exp() {
     omniretarget_robot_terrain)
       tt_convert_omniretarget_robot_terrain "$@"
       ;;
+    parc_pair_dataset)
+      tt_convert_parc_pair_dataset "$@"
+      ;;
     *)
       echo "Unsupported CONVERT_KIND: ${convert_kind}" >&2
-      echo "Expected one of: pair, omniretarget_robot_terrain" >&2
+      echo "Expected one of: pair, omniretarget_robot_terrain, parc_pair_dataset" >&2
       exit 1
       ;;
   esac
+}
+
+tt_train_general_pair_dataset_exp() {
+  local task="${TASK:-TT-Tracking-TerrainOracleTeacherGeneral-Unitree-G1}"
+  local pair_dataset="${PAIR_DATASET:-/home/humanoid/Downloads/Data/parc_initial_aug_g1/pair_dataset.jsonl}"
+  local dataset_validate="${DATASET_VALIDATE:-fast}"
+  local experiment_name="${EXPERIMENT_NAME:-tt_general_pair_dataset}"
+  local run_name="${RUN_NAME:-general_pair_dataset_g1_oracle_teacher_n8192_adaptive}"
+  local sampling_mode="${SAMPLING_MODE:-adaptive}"
+  local pair_sampler_mode="${PAIR_SAMPLER_MODE:-independent}"
+  local num_envs="${NUM_ENVS:-8192}"
+  local max_iterations="${MAX_ITERATIONS:-20000}"
+  local max_pairs="${MAX_PAIRS:-}"
+  local cuda_visible_devices="${CUDA_VISIBLE_DEVICES:-0}"
+  local gpu_ids="${GPU_IDS:-[0]}"
+  local wandb_env_file="${WANDB_ENV_FILE:-/data/junsong/.secrets/wandb.env}"
+
+  tt_cd_repo_root
+  tt_source_wandb_env "${wandb_env_file}"
+  tt_require_file "${pair_dataset}" "Pair dataset"
+  tt_export_cuda "${cuda_visible_devices}" "${gpu_ids}"
+
+  local -a train_args=(
+    --task "${task}"
+    --agent.experiment-name "${experiment_name}"
+    --agent.run-name "${run_name}"
+    --pair-dataset "${pair_dataset}"
+    --dataset-validate "${dataset_validate}"
+    --pair-sampler-mode "${pair_sampler_mode}"
+    --env.commands.motion.sampling-mode "${sampling_mode}"
+    --env.scene.num-envs "${num_envs}"
+    --agent.max-iterations "${max_iterations}"
+    --gpu-ids "${gpu_ids}"
+  )
+
+  if [[ -n "${max_pairs}" ]]; then
+    train_args+=(--max-pairs "${max_pairs}")
+  fi
+
+  uv run python -m terrain_tracking.tasks.general_terrain_tracking.scripts.train \
+    "${train_args[@]}" \
+    "$@"
 }
