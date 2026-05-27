@@ -33,6 +33,30 @@ def test_pair_frame_sampler_independent_mode_samples_valid_frames_and_updates_we
   )
 
 
+def test_pair_frame_sampler_accumulates_duplicate_failure_bins():
+  sampler = PairFrameSampler(
+    frame_counts=torch.tensor([10]),
+    cfg=PairFrameSamplerCfg(
+      num_bins=5,
+      mode="independent",
+      ema_alpha=1.0,
+      min_weight=0.0,
+    ),
+    device="cpu",
+  )
+
+  sampler.update_failures(
+    pair_indices=torch.zeros(5, dtype=torch.long),
+    local_frames=torch.tensor([4, 4, 4, 4, 0]),
+    failure_mask=torch.ones(5, dtype=torch.bool),
+  )
+
+  torch.testing.assert_close(
+    sampler.bin_weights[0],
+    torch.tensor([0.2, 0.0, 0.8, 0.0, 0.0]),
+  )
+
+
 def test_pair_frame_sampler_concat_mode_samples_valid_pair_bins():
   sampler = PairFrameSampler(
     frame_counts=torch.tensor([10, 20, 30]),

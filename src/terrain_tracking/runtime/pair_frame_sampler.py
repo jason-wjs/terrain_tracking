@@ -111,7 +111,11 @@ class PairFrameSampler:
       local_frames[failure_mask],
     )
     counts = torch.zeros_like(self.bin_weights)
-    counts[failed_pairs, failed_bins] += 1.0
+    counts.index_put_(
+      (failed_pairs, failed_bins),
+      torch.ones_like(failed_bins, dtype=counts.dtype),
+      accumulate=True,
+    )
     if self.cfg.mode == "concat_pair_bins":
       flat_counts = counts.reshape(-1)
       self.concat_bin_weights = _blend_and_normalize(
