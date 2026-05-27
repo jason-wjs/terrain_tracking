@@ -7,7 +7,14 @@ from terrain_tracking.tasks.general_terrain_tracking.config.g1.env_cfgs import (
 )
 from terrain_tracking.tasks.general_terrain_tracking.mdp import (
   MultiMotionCommandCfg,
+  observations,
   out_of_tile_bounds,
+)
+from terrain_tracking.tasks.oracle_terrain_tracking.config.g1.env_cfgs import (
+  unitree_g1_oracle_teacher_terrain_tracking_env_cfg,
+)
+from terrain_tracking.tasks.oracle_terrain_tracking.config.g1 import (
+  observations as oracle_observations,
 )
 
 
@@ -26,3 +33,23 @@ def test_general_teacher_cfg_replaces_motion_command_and_adds_tile_termination()
   assert isinstance(termination, TerminationTermCfg)
   assert termination.func is out_of_tile_bounds
   assert termination.time_out is False
+
+
+def test_general_teacher_uses_pair_local_pelvis_position_observation() -> None:
+  cfg = unitree_g1_general_oracle_teacher_terrain_tracking_env_cfg()
+
+  for group_name in ("actor", "critic"):
+    terms = cfg.observations[group_name].terms
+    assert "pelvis_global_pos_w" not in terms
+    assert "pelvis_pair_local_pos_w" in terms
+    assert terms["pelvis_pair_local_pos_w"].func is observations.pelvis_pair_local_pos_w
+
+
+def test_single_oracle_teacher_keeps_world_pelvis_position_observation() -> None:
+  cfg = unitree_g1_oracle_teacher_terrain_tracking_env_cfg()
+
+  for group_name in ("actor", "critic"):
+    terms = cfg.observations[group_name].terms
+    assert "pelvis_global_pos_w" in terms
+    assert terms["pelvis_global_pos_w"].func is oracle_observations.pelvis_global_pos_w
+    assert "pelvis_pair_local_pos_w" not in terms

@@ -113,6 +113,10 @@ class MultiMotionCommand(CommandTerm):
     return body_pos + self.current_tile_origins[:, None, :]
 
   @property
+  def body_pos_pair(self) -> torch.Tensor:
+    return self.body_pos_w - self.current_tile_origins[:, None, :]
+
+  @property
   def body_quat_w(self) -> torch.Tensor:
     return self.motion.body_quat_w(self._global_frame_indices)[:, self.body_indexes]
 
@@ -127,6 +131,10 @@ class MultiMotionCommand(CommandTerm):
   @property
   def anchor_pos_w(self) -> torch.Tensor:
     return self.body_pos_w[:, self.motion_anchor_body_index]
+
+  @property
+  def anchor_pos_pair(self) -> torch.Tensor:
+    return self.anchor_pos_w - self.current_tile_origins
 
   @property
   def anchor_quat_w(self) -> torch.Tensor:
@@ -153,6 +161,10 @@ class MultiMotionCommand(CommandTerm):
     return self.robot.data.body_link_pos_w[:, self.body_indexes]
 
   @property
+  def robot_body_pos_pair(self) -> torch.Tensor:
+    return self.robot_body_pos_w - self.current_tile_origins[:, None, :]
+
+  @property
   def robot_body_quat_w(self) -> torch.Tensor:
     return self.robot.data.body_link_quat_w[:, self.body_indexes]
 
@@ -167,6 +179,10 @@ class MultiMotionCommand(CommandTerm):
   @property
   def robot_anchor_pos_w(self) -> torch.Tensor:
     return self.robot.data.body_link_pos_w[:, self.robot_anchor_body_index]
+
+  @property
+  def robot_anchor_pos_pair(self) -> torch.Tensor:
+    return self.robot_anchor_pos_w - self.current_tile_origins
 
   @property
   def robot_anchor_quat_w(self) -> torch.Tensor:
