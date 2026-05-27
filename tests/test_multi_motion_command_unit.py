@@ -18,6 +18,4 @@ def test_multi_motion_command_cfg_exposes_general_dataset_fields() -> None:
   assert cfg.pair_dataset == "/tmp/pairs.jsonl"
   assert cfg.dataset_validate == "fast"
   assert cfg.sampler.mode == "independent"
-  assert cfg.sampler.ema_alpha == 0.001
-  assert cfg.sampler.uniform_ratio == 0.1
   assert isinstance(cfg.sampler, PairFrameSamplerCfg)

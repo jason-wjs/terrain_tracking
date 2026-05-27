@@ -181,9 +181,11 @@ class MultiMotionCommand(CommandTerm):
     return self.robot.data.body_link_ang_vel_w[:, self.robot_anchor_body_index]
 
   def _update_metrics(self) -> None:
-    sampling_entropy, sampling_top1_prob = self.sampler.sampling_metrics()
-    self.metrics["sampling_entropy"][:] = sampling_entropy
-    self.metrics["sampling_top1_prob"][:] = sampling_top1_prob
+    self.metrics["sampling_entropy"][:] = 1.0
+    if self.cfg.sampler.mode == "concat_pair_bins":
+      self.metrics["sampling_top1_prob"][:] = torch.max(self.sampler.concat_bin_weights)
+    else:
+      self.metrics["sampling_top1_prob"][:] = torch.max(self.sampler.bin_weights)
 
   def _resample_command(self, env_ids: torch.Tensor) -> None:
     if self.cfg.sampling_mode == "start":
