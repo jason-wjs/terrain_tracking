@@ -51,6 +51,7 @@ def _apply_frontend(env_cfg, args: PlayConfig) -> None:
     num_bins=motion_cmd.sampler.num_bins,
     mode=args.pair_sampler_mode,
     ema_alpha=motion_cmd.sampler.ema_alpha,
+    uniform_ratio=motion_cmd.sampler.uniform_ratio,
     min_weight=motion_cmd.sampler.min_weight,
   )
   apply_pair_dataset_to_env_cfg(env_cfg)
