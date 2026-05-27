@@ -44,6 +44,15 @@ def test_general_oracle_teacher_env_can_reset_and_step_on_cpu(tmp_path: Path) ->
   try:
     obs, _extras = env.reset()
     assert set(obs.keys()) == {"actor", "critic"}
+    command = env.command_manager.get_term("motion")
+    assert torch.allclose(
+      command.anchor_pos_w,
+      command.body_pos_w[:, command.motion_anchor_body_index],
+    )
+    assert torch.allclose(
+      command.anchor_quat_w,
+      command.body_quat_w[:, command.motion_anchor_body_index],
+    )
 
     action_dim = env.unwrapped.single_action_space.shape[0]
     action = torch.zeros((1, action_dim), dtype=torch.float32, device=env.device)
