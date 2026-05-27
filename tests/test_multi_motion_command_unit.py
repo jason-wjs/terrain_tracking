@@ -22,6 +22,9 @@ def test_multi_motion_command_cfg_exposes_general_dataset_fields() -> None:
   assert cfg.dataset_validate == "fast"
   assert cfg.sampler.mode == "independent"
   assert isinstance(cfg.sampler, PairFrameSamplerCfg)
+  assert cfg.sampler.adaptive_alpha == 1.0e-3
+  assert cfg.sampler.adaptive_uniform_ratio == 0.1
+  assert not hasattr(cfg.sampler, "ema_alpha")
 
 
 def test_pelvis_pair_local_pos_observation_removes_tile_origin() -> None:

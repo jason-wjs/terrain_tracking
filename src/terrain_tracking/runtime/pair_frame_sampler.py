@@ -12,7 +12,8 @@ SamplerMode = Literal["independent", "concat_pair_bins"]
 class PairFrameSamplerCfg:
   num_bins: int = 32
   mode: SamplerMode = "independent"
-  ema_alpha: float = 0.2
+  adaptive_alpha: float = 1.0e-3
+  adaptive_uniform_ratio: float = 0.1
   min_weight: float = 1.0e-4
 
 
@@ -51,18 +52,21 @@ class PairFrameSampler:
       pair_weights.to(device=self.device, dtype=torch.float32),
       min_weight=cfg.min_weight,
     )
-    self.bin_weights = torch.full(
+    self.bin_failure_scores = torch.zeros(
       (self.num_pairs, cfg.num_bins),
-      1.0 / cfg.num_bins,
       dtype=torch.float32,
       device=self.device,
     )
-    self.concat_bin_weights = torch.full(
-      (self.num_pairs * cfg.num_bins,),
-      1.0 / (self.num_pairs * cfg.num_bins),
-      dtype=torch.float32,
-      device=self.device,
-    )
+    self.bin_weights = self._bin_probabilities_from_scores()
+    self.concat_bin_weights = self.joint_bin_probabilities.reshape(-1)
+
+  @property
+  def pair_probabilities(self) -> torch.Tensor:
+    return self.pair_weights
+
+  @property
+  def joint_bin_probabilities(self) -> torch.Tensor:
+    return self.pair_weights[:, None] * self.bin_weights
 
   def sample(self, env_ids: torch.Tensor) -> PairFrameSample:
     env_ids = env_ids.to(device=self.device)
@@ -110,29 +114,32 @@ class PairFrameSampler:
       failed_pairs,
       local_frames[failure_mask],
     )
-    counts = torch.zeros_like(self.bin_weights)
+    counts = torch.zeros_like(self.bin_failure_scores)
     counts.index_put_(
       (failed_pairs, failed_bins),
       torch.ones_like(failed_bins, dtype=counts.dtype),
       accumulate=True,
     )
-    if self.cfg.mode == "concat_pair_bins":
-      flat_counts = counts.reshape(-1)
-      self.concat_bin_weights = _blend_and_normalize(
-        self.concat_bin_weights,
-        flat_counts,
-        alpha=self.cfg.ema_alpha,
-        min_weight=self.cfg.min_weight,
-      )
-    else:
-      for pair_index in torch.unique(failed_pairs):
-        idx = int(pair_index)
-        self.bin_weights[idx] = _blend_and_normalize(
-          self.bin_weights[idx],
-          counts[idx],
-          alpha=self.cfg.ema_alpha,
-          min_weight=self.cfg.min_weight,
-        )
+    row_sums = torch.sum(counts, dim=1, keepdim=True)
+    normalized_counts = torch.zeros_like(counts)
+    nonzero_rows = row_sums.squeeze(1) > 0.0
+    normalized_counts[nonzero_rows] = counts[nonzero_rows] / row_sums[nonzero_rows]
+    self.bin_failure_scores = (
+      (1.0 - self.cfg.adaptive_alpha) * self.bin_failure_scores
+      + self.cfg.adaptive_alpha * normalized_counts
+    )
+    self._refresh_probabilities()
+
+  def _bin_probabilities_from_scores(self) -> torch.Tensor:
+    floor = self.cfg.adaptive_uniform_ratio / float(self.cfg.num_bins)
+    return _normalize_rows(
+      self.bin_failure_scores + floor,
+      min_weight=self.cfg.min_weight,
+    )
+
+  def _refresh_probabilities(self) -> None:
+    self.bin_weights = self._bin_probabilities_from_scores()
+    self.concat_bin_weights = self.joint_bin_probabilities.reshape(-1)
 
   def _sample_local_frames(
     self,
@@ -171,20 +178,19 @@ class PairFrameSampler:
 
 def _normalize(weights: torch.Tensor, *, min_weight: float) -> torch.Tensor:
   weights = torch.clamp(weights, min=min_weight)
+  if float(torch.sum(weights)) <= 0.0:
+    weights = torch.ones_like(weights)
   return weights / torch.sum(weights)
 
 
-def _blend_and_normalize(
-  old_weights: torch.Tensor,
-  counts: torch.Tensor,
-  *,
-  alpha: float,
-  min_weight: float,
-) -> torch.Tensor:
-  if float(torch.sum(counts)) <= 0.0:
-    return _normalize(old_weights, min_weight=min_weight)
-  target = _normalize(counts, min_weight=min_weight)
-  return _normalize((1.0 - alpha) * old_weights + alpha * target, min_weight=min_weight)
+def _normalize_rows(weights: torch.Tensor, *, min_weight: float) -> torch.Tensor:
+  weights = torch.clamp(weights, min=min_weight)
+  row_sums = torch.sum(weights, dim=1, keepdim=True)
+  zero_rows = row_sums <= 0.0
+  if bool(torch.any(zero_rows)):
+    weights = torch.where(zero_rows, torch.ones_like(weights), weights)
+    row_sums = torch.sum(weights, dim=1, keepdim=True)
+  return weights / row_sums
 
 
 __all__ = [

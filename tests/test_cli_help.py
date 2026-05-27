@@ -98,6 +98,23 @@ def test_general_play_module_help_mentions_pair_dataset() -> None:
   assert "--dataset-validate" in proc.stdout
 
 
+def test_general_frontends_copy_current_sampler_cfg_fields() -> None:
+  scripts_root = Path(__file__).resolve().parents[1] / "src" / "terrain_tracking"
+  train_script = (
+    scripts_root / "tasks" / "general_terrain_tracking" / "scripts" / "train.py"
+  ).read_text(encoding="utf-8")
+  play_script = (
+    scripts_root / "tasks" / "general_terrain_tracking" / "scripts" / "play.py"
+  ).read_text(encoding="utf-8")
+
+  for script in (train_script, play_script):
+    assert "adaptive_alpha=motion_cmd.sampler.adaptive_alpha" in script
+    assert (
+      "adaptive_uniform_ratio=motion_cmd.sampler.adaptive_uniform_ratio" in script
+    )
+    assert "ema_alpha" not in script
+
+
 def test_convert_module_help_mentions_required_inputs() -> None:
   proc = subprocess.run(
     [

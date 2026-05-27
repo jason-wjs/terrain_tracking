@@ -10,11 +10,11 @@ from terrain_tracking.tasks.general_terrain_tracking.mdp import (
   observations,
   out_of_tile_bounds,
 )
-from terrain_tracking.tasks.oracle_terrain_tracking.config.g1.env_cfgs import (
-  unitree_g1_oracle_teacher_terrain_tracking_env_cfg,
-)
 from terrain_tracking.tasks.oracle_terrain_tracking.config.g1 import (
   observations as oracle_observations,
+)
+from terrain_tracking.tasks.oracle_terrain_tracking.config.g1.env_cfgs import (
+  unitree_g1_oracle_teacher_terrain_tracking_env_cfg,
 )
 
 

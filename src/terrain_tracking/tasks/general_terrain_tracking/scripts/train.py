@@ -40,7 +40,8 @@ def _apply_frontend(args: MjlabTrainConfig, frontend: FrontendConfig) -> None:
   motion_cmd.sampler = PairFrameSamplerCfg(
     num_bins=motion_cmd.sampler.num_bins,
     mode=frontend.pair_sampler_mode,
-    ema_alpha=motion_cmd.sampler.ema_alpha,
+    adaptive_alpha=motion_cmd.sampler.adaptive_alpha,
+    adaptive_uniform_ratio=motion_cmd.sampler.adaptive_uniform_ratio,
     min_weight=motion_cmd.sampler.min_weight,
   )
   apply_pair_dataset_to_env_cfg(args.env)

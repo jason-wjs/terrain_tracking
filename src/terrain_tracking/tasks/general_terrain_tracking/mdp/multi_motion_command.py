@@ -7,6 +7,7 @@ import torch
 from mjlab.managers import CommandTerm, CommandTermCfg
 from mjlab.utils.lab_api.math import (
   quat_apply,
+  quat_error_magnitude,
   quat_inv,
   quat_mul,
   yaw_quat,
@@ -23,6 +24,24 @@ from terrain_tracking.scene.pair_terrain_bank import PairTerrainBank
 
 if TYPE_CHECKING:
   from mjlab.envs import ManagerBasedRlEnv
+
+
+def _normalized_entropy(probabilities: torch.Tensor, *, dim: int = -1) -> torch.Tensor:
+  count = probabilities.shape[dim]
+  entropy = -torch.sum(
+    probabilities * torch.log(probabilities + 1.0e-12),
+    dim=dim,
+  )
+  if count <= 1:
+    return torch.ones_like(entropy)
+  normalizer = torch.log(
+    torch.tensor(
+      float(count),
+      device=probabilities.device,
+      dtype=probabilities.dtype,
+    )
+  )
+  return entropy / normalizer
 
 
 class MultiMotionCommand(CommandTerm):
@@ -81,8 +100,32 @@ class MultiMotionCommand(CommandTerm):
     )
     self.current_tile_origins = torch.zeros(self.num_envs, 3, device=self.device)
     self.current_occupied_bounds_xy = torch.zeros(self.num_envs, 2, 2, device=self.device)
-    self.metrics["sampling_entropy"] = torch.zeros(self.num_envs, device=self.device)
-    self.metrics["sampling_top1_prob"] = torch.zeros(self.num_envs, device=self.device)
+    for metric_name in (
+      "sampling_entropy",
+      "sampling_top1_prob",
+      "sampling_pair_entropy",
+      "sampling_pair_top1_prob",
+      "sampling_bin_entropy_mean",
+      "sampling_bin_entropy_min",
+      "sampling_bin_top1_prob_mean",
+      "sampling_bin_top1_prob_max",
+      "active_pair_entropy",
+      "active_pair_top1_frac",
+    ):
+      self.metrics[metric_name] = torch.zeros(self.num_envs, device=self.device)
+    for metric_name in (
+      "error_anchor_pos",
+      "error_anchor_rot",
+      "error_anchor_lin_vel",
+      "error_anchor_ang_vel",
+      "error_body_pos",
+      "error_body_rot",
+      "error_body_lin_vel",
+      "error_body_ang_vel",
+      "error_joint_pos",
+      "error_joint_vel",
+    ):
+      self.metrics[metric_name] = torch.zeros(self.num_envs, device=self.device)
 
   @property
   def command(self) -> torch.Tensor:
@@ -197,17 +240,87 @@ class MultiMotionCommand(CommandTerm):
     return self.robot.data.body_link_ang_vel_w[:, self.robot_anchor_body_index]
 
   def _update_metrics(self) -> None:
-    self.metrics["sampling_entropy"][:] = 1.0
-    if self.cfg.sampler.mode == "concat_pair_bins":
-      self.metrics["sampling_top1_prob"][:] = torch.max(self.sampler.concat_bin_weights)
-    else:
-      self.metrics["sampling_top1_prob"][:] = torch.max(self.sampler.bin_weights)
+    pair_probs = self.sampler.pair_probabilities
+    bin_probs = self.sampler.bin_weights
+    joint_probs = self.sampler.joint_bin_probabilities.reshape(-1)
+
+    pair_entropy = _normalized_entropy(pair_probs)
+    pair_top1 = torch.max(pair_probs)
+    bin_entropy = _normalized_entropy(bin_probs, dim=1)
+    bin_top1 = torch.max(bin_probs, dim=1).values
+    joint_entropy = _normalized_entropy(joint_probs)
+    joint_top1 = torch.max(joint_probs)
+
+    active_counts = torch.bincount(
+      self.env_pair_indices,
+      minlength=int(self.motion.frame_counts.numel()),
+    ).to(dtype=torch.float32)
+    active_probs = active_counts / torch.clamp(active_counts.sum(), min=1.0)
+    active_entropy = _normalized_entropy(active_probs)
+    active_top1 = torch.max(active_probs)
+
+    self.metrics["sampling_entropy"][:] = joint_entropy
+    self.metrics["sampling_top1_prob"][:] = joint_top1
+    self.metrics["sampling_pair_entropy"][:] = pair_entropy
+    self.metrics["sampling_pair_top1_prob"][:] = pair_top1
+    self.metrics["sampling_bin_entropy_mean"][:] = torch.mean(bin_entropy)
+    self.metrics["sampling_bin_entropy_min"][:] = torch.min(bin_entropy)
+    self.metrics["sampling_bin_top1_prob_mean"][:] = torch.mean(bin_top1)
+    self.metrics["sampling_bin_top1_prob_max"][:] = torch.max(bin_top1)
+    self.metrics["active_pair_entropy"][:] = active_entropy
+    self.metrics["active_pair_top1_frac"][:] = active_top1
+    self.metrics["error_anchor_pos"] = torch.norm(
+      self.anchor_pos_w - self.robot_anchor_pos_w,
+      dim=-1,
+    )
+    self.metrics["error_anchor_rot"] = quat_error_magnitude(
+      self.anchor_quat_w,
+      self.robot_anchor_quat_w,
+    )
+    self.metrics["error_anchor_lin_vel"] = torch.norm(
+      self.anchor_lin_vel_w - self.robot_anchor_lin_vel_w,
+      dim=-1,
+    )
+    self.metrics["error_anchor_ang_vel"] = torch.norm(
+      self.anchor_ang_vel_w - self.robot_anchor_ang_vel_w,
+      dim=-1,
+    )
+    self.metrics["error_body_pos"] = torch.norm(
+      self.body_pos_relative_w - self.robot_body_pos_w,
+      dim=-1,
+    ).mean(dim=-1)
+    self.metrics["error_body_rot"] = quat_error_magnitude(
+      self.body_quat_relative_w,
+      self.robot_body_quat_w,
+    ).mean(dim=-1)
+    self.metrics["error_body_lin_vel"] = torch.norm(
+      self.body_lin_vel_w - self.robot_body_lin_vel_w,
+      dim=-1,
+    ).mean(dim=-1)
+    self.metrics["error_body_ang_vel"] = torch.norm(
+      self.body_ang_vel_w - self.robot_body_ang_vel_w,
+      dim=-1,
+    ).mean(dim=-1)
+    self.metrics["error_joint_pos"] = torch.norm(
+      self.joint_pos - self.robot_joint_pos,
+      dim=-1,
+    )
+    self.metrics["error_joint_vel"] = torch.norm(
+      self.joint_vel - self.robot_joint_vel,
+      dim=-1,
+    )
 
   def _resample_command(self, env_ids: torch.Tensor) -> None:
     if self.cfg.sampling_mode == "start":
-      pair_indices = torch.zeros(len(env_ids), dtype=torch.long, device=self.device)
+      sample = self.sampler.sample(env_ids)
+      pair_indices = sample.pair_indices
       local_frames = torch.zeros(len(env_ids), dtype=torch.long, device=self.device)
+    elif self.cfg.sampling_mode == "uniform":
+      sample = self.sampler.sample(env_ids)
+      pair_indices = sample.pair_indices
+      local_frames = sample.local_frames
     else:
+      assert self.cfg.sampling_mode == "adaptive"
       if self.cfg.sampling_mode == "adaptive" and hasattr(
         self._env,
         "termination_manager",

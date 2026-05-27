@@ -7,8 +7,10 @@ from mjlab.tasks.tracking.mdp import MotionCommandCfg
 
 from terrain_tracking.runtime.apply_pair_dataset import apply_pair_dataset_to_env_cfg
 from terrain_tracking.tasks.general_terrain_tracking import mdp
-from terrain_tracking.tasks.general_terrain_tracking.mdp import observations
-from terrain_tracking.tasks.general_terrain_tracking.mdp import MultiMotionCommandCfg
+from terrain_tracking.tasks.general_terrain_tracking.mdp import (
+  MultiMotionCommandCfg,
+  observations,
+)
 from terrain_tracking.tasks.oracle_terrain_tracking.config.g1.env_cfgs import (
   unitree_g1_oracle_teacher_terrain_tracking_env_cfg,
 )
