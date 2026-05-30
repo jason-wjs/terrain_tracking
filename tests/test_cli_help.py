@@ -211,6 +211,12 @@ def test_general_mid_blocks_exp_scripts_target_pair_dataset_training() -> None:
     / "train"
     / "mid_blocks_general_oracle_height_longscan_phpreward_adaptive.sh"
   ).read_text(encoding="utf-8")
+  height_longscan_play_script = (
+    scripts_root
+    / "exp"
+    / "play"
+    / "mid_blocks_general_oracle_height_longscan_phpreward_adaptive.sh"
+  ).read_text(encoding="utf-8")
 
   assert "tt_convert_parc_pair_dataset" in common
   assert "terrain_tracking.build_pair_dataset" in common
@@ -239,6 +245,20 @@ def test_general_mid_blocks_exp_scripts_target_pair_dataset_training() -> None:
     in height_longscan_train_script
   )
   assert "tt_train_general_pair_dataset_exp" in height_longscan_train_script
+  assert (
+    "TT-Tracking-TerrainOracleHeightLongScanPhpRewardGeneral-Unitree-G1"
+    in height_longscan_play_script
+  )
+  assert "pair_dataset_mid_blocks.jsonl" in height_longscan_play_script
+  assert (
+    "mid_blocks_general_g1_oracle_height_longscan_phpreward_n16384_adaptive"
+    in height_longscan_play_script
+  )
+  assert "tt_latest_checkpoint_file" in height_longscan_play_script
+  assert "terrain_tracking.tasks.general_terrain_tracking.scripts.play" in (
+    height_longscan_play_script
+  )
+  assert "--max-pairs" in height_longscan_play_script
 
 
 def test_obsolete_debug_shell_scripts_are_removed() -> None:
