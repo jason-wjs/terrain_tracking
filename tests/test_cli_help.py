@@ -276,11 +276,12 @@ def test_general_running_height_longscan_exp_script_targets_pair_dataset_trainin
   )
   assert "pair_dataset_running.jsonl" in train_script
   assert (
-    "running_general_g1_oracle_height_longscan_phpreward_m128_n8192_adaptive"
+    "running_general_g1_oracle_height_longscan_phpreward_full_n16384_adaptive"
     in train_script
   )
-  assert "MAX_PAIRS=\"${MAX_PAIRS:-128}\"" in train_script
-  assert "NUM_ENVS=\"${NUM_ENVS:-8192}\"" in train_script
+  assert "MAX_PAIRS=\"${MAX_PAIRS:-}\"" in train_script
+  assert "NUM_ENVS=\"${NUM_ENVS:-16384}\"" in train_script
+  assert "MAX_ITERATIONS=\"${MAX_ITERATIONS:-50000}\"" in train_script
   assert "tt_train_general_pair_dataset_exp" in train_script
 
 
