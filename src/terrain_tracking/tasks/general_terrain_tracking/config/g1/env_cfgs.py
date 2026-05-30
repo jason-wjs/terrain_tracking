@@ -12,6 +12,7 @@ from terrain_tracking.tasks.general_terrain_tracking.mdp import (
   observations,
 )
 from terrain_tracking.tasks.oracle_terrain_tracking.config.g1.env_cfgs import (
+  unitree_g1_oracle_height_long_scan_php_reward_terrain_tracking_env_cfg,
   unitree_g1_oracle_teacher_terrain_tracking_env_cfg,
 )
 
@@ -28,12 +29,11 @@ def _replace_world_teacher_position_with_pair_local(
     )
 
 
-def unitree_g1_general_oracle_teacher_terrain_tracking_env_cfg(
+def _generalize_single_pair_env_cfg(
+  cfg: ManagerBasedRlEnvCfg,
   *,
-  pair_dataset: str = "",
-  play: bool = False,
+  pair_dataset: str,
 ) -> ManagerBasedRlEnvCfg:
-  cfg = unitree_g1_oracle_teacher_terrain_tracking_env_cfg(play=play)
   motion_cmd = cfg.commands["motion"]
   assert isinstance(motion_cmd, MotionCommandCfg)
 
@@ -49,7 +49,6 @@ def unitree_g1_general_oracle_teacher_terrain_tracking_env_cfg(
     joint_position_range=motion_cmd.joint_position_range,
     sampling_mode=motion_cmd.sampling_mode,
   )
-  _replace_world_teacher_position_with_pair_local(cfg)
   cfg.terminations["out_of_tile_bounds"] = TerminationTermCfg(
     func=mdp.out_of_tile_bounds,
     params={"command_name": "motion", "fail_margin": 1.0},
@@ -60,4 +59,29 @@ def unitree_g1_general_oracle_teacher_terrain_tracking_env_cfg(
   return cfg
 
 
-__all__ = ["unitree_g1_general_oracle_teacher_terrain_tracking_env_cfg"]
+def unitree_g1_general_oracle_teacher_terrain_tracking_env_cfg(
+  *,
+  pair_dataset: str = "",
+  play: bool = False,
+) -> ManagerBasedRlEnvCfg:
+  cfg = unitree_g1_oracle_teacher_terrain_tracking_env_cfg(play=play)
+  _generalize_single_pair_env_cfg(cfg, pair_dataset=pair_dataset)
+  _replace_world_teacher_position_with_pair_local(cfg)
+  return cfg
+
+
+def unitree_g1_general_oracle_height_long_scan_php_reward_terrain_tracking_env_cfg(
+  *,
+  pair_dataset: str = "",
+  play: bool = False,
+) -> ManagerBasedRlEnvCfg:
+  cfg = unitree_g1_oracle_height_long_scan_php_reward_terrain_tracking_env_cfg(
+    play=play
+  )
+  return _generalize_single_pair_env_cfg(cfg, pair_dataset=pair_dataset)
+
+
+__all__ = [
+  "unitree_g1_general_oracle_height_long_scan_php_reward_terrain_tracking_env_cfg",
+  "unitree_g1_general_oracle_teacher_terrain_tracking_env_cfg",
+]
