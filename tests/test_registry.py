@@ -62,6 +62,7 @@ def test_oracle_terrain_tracking_tasks_register_with_mjlab_registry() -> None:
 
   tasks = registry.list_tasks()
   assert "TT-Tracking-TerrainOracleHeight-Unitree-G1" in tasks
+  assert "TT-Tracking-TerrainOracleHeightLongScanPhpReward-Unitree-G1" in tasks
   assert "TT-Tracking-TerrainOracleTeacher-Unitree-G1" in tasks
   assert not any("TerrainOracle" in task and "No-State-Estimation" in task for task in tasks)
 
@@ -75,3 +76,8 @@ def test_general_oracle_teacher_task_registers_with_mjlab_registry() -> None:
   tasks = registry.list_tasks()
   assert "TT-Tracking-TerrainOracleTeacherGeneral-Unitree-G1" in tasks
   assert "TT-Tracking-TerrainOracleTeacherGeneral-Unitree-G1-Play" in tasks
+  assert "TT-Tracking-TerrainOracleHeightLongScanPhpRewardGeneral-Unitree-G1" in tasks
+  assert (
+    "TT-Tracking-TerrainOracleHeightLongScanPhpRewardGeneral-Unitree-G1-Play"
+    in tasks
+  )

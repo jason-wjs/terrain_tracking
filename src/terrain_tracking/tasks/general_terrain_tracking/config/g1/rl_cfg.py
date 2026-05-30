@@ -7,6 +7,16 @@ from terrain_tracking.tasks.oracle_terrain_tracking.config.g1.rl_cfg import (
 )
 
 
+def unitree_g1_general_oracle_height_long_scan_php_reward_terrain_tracking_ppo_runner_cfg() -> (
+  RslRlOnPolicyRunnerCfg
+):
+  cfg = unitree_g1_oracle_terrain_tracking_ppo_runner_cfg()
+  cfg.experiment_name = (
+    "g1_general_oracle_height_longscan_phpreward_terrain_tracking"
+  )
+  return cfg
+
+
 def unitree_g1_general_oracle_teacher_terrain_tracking_ppo_runner_cfg() -> (
   RslRlOnPolicyRunnerCfg
 ):
@@ -15,4 +25,7 @@ def unitree_g1_general_oracle_teacher_terrain_tracking_ppo_runner_cfg() -> (
   return cfg
 
 
-__all__ = ["unitree_g1_general_oracle_teacher_terrain_tracking_ppo_runner_cfg"]
+__all__ = [
+  "unitree_g1_general_oracle_height_long_scan_php_reward_terrain_tracking_ppo_runner_cfg",
+  "unitree_g1_general_oracle_teacher_terrain_tracking_ppo_runner_cfg",
+]
