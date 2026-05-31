@@ -125,3 +125,21 @@ def test_general_start_sampling_uses_multiple_pairs(tmp_path: Path) -> None:
     assert torch.all(command.time_steps <= 1)
   finally:
     env.close()
+
+
+def test_general_pair_dataset_uses_fixed_contact_buffer_defaults(
+  tmp_path: Path,
+) -> None:
+  root = tmp_path / "parc"
+  for pair_index in range(40):
+    _create_pair(root, f"platform/pair_{pair_index:03d}", frames=8)
+  manifest = tmp_path / "pair_dataset.jsonl"
+  build_parc_pair_dataset(BuildPairDatasetConfig(root=root, output=manifest))
+
+  cfg = unitree_g1_general_oracle_teacher_terrain_tracking_env_cfg(
+    pair_dataset=str(manifest),
+    play=True,
+  )
+
+  assert cfg.sim.nconmax == 256
+  assert cfg.sim.njmax == 512

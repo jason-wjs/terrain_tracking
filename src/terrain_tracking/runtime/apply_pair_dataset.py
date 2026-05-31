@@ -7,6 +7,9 @@ from terrain_tracking.runtime.pair_selection import select_pair_records
 from terrain_tracking.scene.pair_terrain_bank import PairTerrainBank
 from terrain_tracking.tasks.general_terrain_tracking.mdp import MultiMotionCommandCfg
 
+DEFAULT_GENERAL_PAIR_NCONMAX = 256
+DEFAULT_GENERAL_PAIR_NJMAX = 512
+
 
 def apply_pair_dataset_to_env_cfg(cfg: ManagerBasedRlEnvCfg) -> PairTerrainBank:
   motion_cmd = cfg.commands["motion"]
@@ -31,12 +34,15 @@ def apply_pair_dataset_to_env_cfg(cfg: ManagerBasedRlEnvCfg) -> PairTerrainBank:
 
   cfg.scene.spec_fn = spec_fn
   cfg.scene.env_spacing = 0.0
-  total_boxes = sum(len(tile.boxes) for tile in bank.tiles)
-  if cfg.sim.nconmax is None or cfg.sim.nconmax < max(256, total_boxes * 4):
-    cfg.sim.nconmax = max(256, total_boxes * 4)
-  if cfg.sim.njmax is None or cfg.sim.njmax < max(512, total_boxes * 8):
-    cfg.sim.njmax = max(512, total_boxes * 8)
+  if cfg.sim.nconmax is None or cfg.sim.nconmax < DEFAULT_GENERAL_PAIR_NCONMAX:
+    cfg.sim.nconmax = DEFAULT_GENERAL_PAIR_NCONMAX
+  if cfg.sim.njmax is None or cfg.sim.njmax < DEFAULT_GENERAL_PAIR_NJMAX:
+    cfg.sim.njmax = DEFAULT_GENERAL_PAIR_NJMAX
   return bank
 
 
-__all__ = ["apply_pair_dataset_to_env_cfg"]
+__all__ = [
+  "DEFAULT_GENERAL_PAIR_NCONMAX",
+  "DEFAULT_GENERAL_PAIR_NJMAX",
+  "apply_pair_dataset_to_env_cfg",
+]
