@@ -8,6 +8,40 @@ terrain source. It is the runtime input contract for train/play entry points.
 **Pair bundle** — Directory containing `pair.json`, `meta.json`, and any local
 motion assets written by a converter.
 
+**Pair dataset** — Collection of motion-terrain pairing records used to train a
+general controller across many terrain-aware tracking scenarios.
+
+**Pair ID** — Stable identifier for one record inside a pair dataset; it is the
+sampling key that keeps the motion clip and terrain tile aligned during reset.
+
+**Pair-local frame** — Local coordinate frame shared by the motion trajectory
+and terrain geometry of one motion-terrain pair.
+
+**Paired reset** — Environment reset that samples one pair ID and uses it to
+select both the motion clip and the terrain tile for that episode.
+
+**Pair-frame sampler** — Reset-time sampler that chooses both the pair ID and
+the start frame or time bin for that pair.
+
+**Terrain adapter** — Source-specific translator that turns a pair dataset
+terrain reference into a common terrain tile.
+
+**Terrain tile** — Placement-ready terrain geometry for one pair dataset record,
+with a stable origin used to align motion replay and terrain contact.
+
+**Terrain tile bank** — Compiled collection of terrain tiles where each pair ID
+maps to one tile origin.
+
+**Tile packing** — Deterministic placement of terrain tiles in world space using
+inflated pair-local bounds so neighboring pairs do not interact during normal
+episodes.
+
+**Tile bounds violation** — Failure condition where a robot leaves the inflated
+pair-local bounds of its currently sampled pair.
+
+**Tile origin** — World-space translation of one pair-local frame inside a
+terrain tile bank; it is not the terrain center or terrain bounds corner.
+
 **Terrain collision manifest** — `terrain_collision.json` file describing PARC
 heightfield collision data and scale. It is preferred over legacy OBJ mesh
 collision when present.
@@ -35,16 +69,6 @@ commonly used train/play configuration and delegates launch behavior to
 **Conversion preset** — Thin shell Adapter under `scripts/exp/convert` that
 declares a common pair bundle conversion and delegates execution to
 `scripts/convert.sh` through `scripts/lib/common.sh`.
-
-## Stable Release Surface
-
-- `terrain_tracking.convert_pair`
-- `terrain_tracking.convert_omniretarget_robot_terrain`
-- `terrain_tracking.runtime.apply_pair_manifest_to_env_cfg`
-- `terrain_tracking.tasks.blind_terrain_tracking.scripts.train`
-- `terrain_tracking.tasks.blind_terrain_tracking.scripts.play`
-- `scripts/convert.sh`, `scripts/train.sh`, `scripts/play.sh`, and
-  `scripts/exp/*/*.sh`
 
 Historical build notes live under `docs/superpowers/`; they are not the release
 interface.

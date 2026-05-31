@@ -105,6 +105,10 @@ This package also registers oracle perception tracking tasks for the current hei
 
 Both tasks reuse the blind tracking rewards, terminations, terrain pair application, and PPO defaults. They are simulation-only oracle tasks and are not deployment policies.
 
+### General Teacher Known Issues
+
+- `TT-Tracking-TerrainOracleTeacherGeneral-Unitree-G1` currently only supports the intended `sampling_mode=adaptive` path for multi-pair training. `sampling_mode=start` is a known bug: it resets all envs to pair index 0 instead of sampling across pairs from frame 0.
+
 Train with the existing paired training entry point:
 
 ```bash
