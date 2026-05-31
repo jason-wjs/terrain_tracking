@@ -12,6 +12,7 @@ from terrain_tracking.tasks.oracle_terrain_tracking.config.g1 import (
 )
 from terrain_tracking.tasks.oracle_terrain_tracking.config.g1.env_cfgs import (
   unitree_g1_oracle_height_terrain_tracking_env_cfg,
+  unitree_g1_oracle_height_long_scan_php_reward_terrain_tracking_env_cfg,
   unitree_g1_oracle_teacher_terrain_tracking_env_cfg,
 )
 
@@ -92,6 +93,36 @@ def test_oracle_height_grid_pattern_has_expected_current_ray_count() -> None:
   assert offsets.shape == (64, 3)
   assert directions.shape == (64, 3)
   assert torch.allclose(directions, torch.tensor([[0.0, 0.0, -1.0]]).repeat(64, 1))
+
+
+def test_oracle_height_long_scan_php_reward_variant_extends_forward_scan_range() -> None:
+  cfg = unitree_g1_oracle_height_long_scan_php_reward_terrain_tracking_env_cfg()
+  sensor_by_name = {sensor.name: sensor for sensor in cfg.scene.sensors or ()}
+  terrain_scan = sensor_by_name["terrain_scan"]
+  assert isinstance(terrain_scan, RayCastSensorCfg)
+  assert isinstance(terrain_scan.pattern, GridPatternCfg)
+  assert terrain_scan.pattern.size == (2.0, 0.7)
+  assert terrain_scan.pattern.resolution == 0.1
+
+  offsets, directions = terrain_scan.pattern.generate_rays(None, "cpu")
+
+  assert offsets.shape == (168, 3)
+  assert directions.shape == (168, 3)
+  assert torch.isclose(offsets[:, 0].min(), torch.tensor(-1.0))
+  assert torch.isclose(offsets[:, 0].max(), torch.tensor(1.0))
+  assert torch.isclose(offsets[:, 1].min(), torch.tensor(-0.35))
+  assert torch.isclose(offsets[:, 1].max(), torch.tensor(0.35))
+  assert torch.allclose(directions, torch.tensor([[0.0, 0.0, -1.0]]).repeat(168, 1))
+
+
+def test_oracle_height_long_scan_php_reward_variant_uses_php_reward_weights_only() -> None:
+  cfg = unitree_g1_oracle_height_long_scan_php_reward_terrain_tracking_env_cfg()
+
+  assert cfg.rewards["motion_global_root_pos"].weight == 1.0
+  assert cfg.rewards["motion_global_root_ori"].weight == 1.0
+  assert cfg.rewards["self_collisions"].weight == -0.5
+  for group_name in ("actor", "critic"):
+    assert ORACLE_TEACHER_TERMS.isdisjoint(_term_names(cfg, group_name))
 
 
 def test_oracle_teacher_includes_height_scan() -> None:

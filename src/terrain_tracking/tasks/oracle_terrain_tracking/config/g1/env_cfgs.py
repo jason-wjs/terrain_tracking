@@ -15,6 +15,8 @@ from terrain_tracking.tasks.oracle_terrain_tracking.config.g1 import observation
 
 TERRAIN_SCAN_SENSOR_NAME = "terrain_scan"
 HEIGHT_SCAN_MAX_DISTANCE = 5.0
+DEFAULT_HEIGHT_SCAN_SIZE = (0.7, 0.7)
+LONG_FORWARD_HEIGHT_SCAN_SIZE = (2.0, 0.7)
 
 
 def _height_scan_term() -> ObservationTermCfg:
@@ -29,12 +31,15 @@ def _teacher_term(func: Callable[..., Any]) -> ObservationTermCfg:
   return ObservationTermCfg(func=func, params={"command_name": "motion"})
 
 
-def _add_oracle_height_scan(cfg: ManagerBasedRlEnvCfg) -> None:
+def _add_oracle_height_scan(
+  cfg: ManagerBasedRlEnvCfg,
+  size: tuple[float, float] = DEFAULT_HEIGHT_SCAN_SIZE,
+) -> None:
   terrain_scan = RayCastSensorCfg(
     name=TERRAIN_SCAN_SENSOR_NAME,
     frame=ObjRef(type="body", name="torso_link", entity="robot"),
     ray_alignment="yaw",
-    pattern=GridPatternCfg(size=(0.7, 0.7), resolution=0.1),
+    pattern=GridPatternCfg(size=size, resolution=0.1),
     max_distance=HEIGHT_SCAN_MAX_DISTANCE,
     exclude_parent_body=True,
     include_geom_groups=(0,),
@@ -84,6 +89,15 @@ def unitree_g1_oracle_height_terrain_tracking_env_cfg(
 ) -> ManagerBasedRlEnvCfg:
   cfg = unitree_g1_blind_terrain_tracking_env_cfg(play=play)
   _add_oracle_height_scan(cfg)
+  return cfg
+
+
+def unitree_g1_oracle_height_long_scan_php_reward_terrain_tracking_env_cfg(
+  play: bool = False,
+) -> ManagerBasedRlEnvCfg:
+  cfg = unitree_g1_blind_terrain_tracking_env_cfg(play=play)
+  _add_oracle_height_scan(cfg, size=LONG_FORWARD_HEIGHT_SCAN_SIZE)
+  _align_oracle_teacher_rewards_with_php(cfg)
   return cfg
 
 

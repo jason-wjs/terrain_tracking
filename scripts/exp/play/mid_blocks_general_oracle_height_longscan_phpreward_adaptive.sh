@@ -14,7 +14,7 @@ EXPERIMENT_NAME="${EXPERIMENT_NAME:-tt_general_pair_dataset_mid_blocks}"
 RUN_NAME="${RUN_NAME:-mid_blocks_general_g1_oracle_height_longscan_phpreward_n16384_adaptive}"
 PAIR_SAMPLER_MODE="${PAIR_SAMPLER_MODE:-independent}"
 PLAY_NUM_ENVS="${PLAY_NUM_ENVS:-1}"
-MAX_PAIRS="${MAX_PAIRS:-1}"
+# MAX_PAIRS="${MAX_PAIRS:-1}"
 NO_TERMINATIONS="${NO_TERMINATIONS:-True}"
 DEVICE="${DEVICE:-}"
 CHECKPOINT_DIR="${CHECKPOINT_DIR:-}"
@@ -39,7 +39,7 @@ play_args=(
   --dataset-validate "${DATASET_VALIDATE}"
   --pair-sampler-mode "${PAIR_SAMPLER_MODE}"
   --num-envs "${PLAY_NUM_ENVS}"
-  --max-pairs "${MAX_PAIRS}"
+ # --max-pairs "${MAX_PAIRS}"
   --no-terminations "${NO_TERMINATIONS}"
 )
 
